@@ -1,31 +1,30 @@
-# TilliTalk
+# TilliTalk — Version 2
 
-A tablet-friendly English sentence-building website for children.
+A tablet-friendly English practice website for children, built with React and Vite.
 
-## Run locally
+## Features
 
-Requires Node.js 20.19+ or 22.12+.
+- Picture and video media library with multiple questions per item
+- Questions alternate between media after 1–2 questions and revisit each item later in the round
+- Tap-to-order word buttons with distractors, audio prompts, and gentle feedback
+- Parent editor for creating, editing, and deleting questions and media
+- Demo content to try the app before uploading anything
+
+## Local development
 
 ```bash
 npm install
 npm run dev
 ```
 
-## Deploy on Render
+## Deploy to Render (Static Site)
 
-1. Push these files to a GitHub repository.
-2. In Render, create a **Static Site** connected to the repository.
-3. Set **Build command** to `npm install && npm run build`.
-4. Set **Publish directory** to `dist`.
-5. Deploy. Render will provide a public URL.
+- Build command: `npm install && npm run build`
+- Publish directory: `dist`
+- Branch: `main`
 
-## Current features
+## IMPORTANT: browser-only storage
 
-- Two starter lessons with sentence-building questions.
-- Tap-to-order word tiles with extra distractor words.
-- Spoken words, questions and completed answers (browser speech synthesis).
-- Basic parent lesson creation with optional small pictures.
+Uploaded media is stored in the browser's IndexedDB; lesson metadata is stored in localStorage. This data is **not** uploaded to GitHub, Render, or other devices. Clearing site data or using a different browser/device will make your custom lessons unavailable. Large videos may exceed storage quotas. There is no password protection on the parent area. Do not use sensitive personal media in this prototype. The next step is online storage, authentication, and cross-device sync.
 
-## Important limitations
-
-This is a prototype. Parent access is not authenticated. Custom lessons live only in the current browser's local storage and are not synced to other devices. Videos, cloud storage, AI question generation and durable progress tracking are future work. The starter dog image is fetched from Unsplash and requires internet access. The car lesson uses an emoji placeholder until a picture is added. Do not store sensitive children's information in this prototype.
+Demo photos are external URLs and require internet access. The example images are illustrative; replace them with your own media before relying on questions about particular visual details.
