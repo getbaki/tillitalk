@@ -384,20 +384,7 @@ return <div className="app">
   ? correctMessages[step % correctMessages.length]
   : tryAgainMessages[step % tryAgainMessages.length]}
 
-if(picked.length===answerWords.length&&picked.every((x,i)=>x.word===answerWords[i])){
-  if(!checked){
-    const nextCount = correctCount + 1;
-    setCorrectCount(nextCount);
-    if(nextCount % 9 === 0){
-      setCelebration('band');
-    }else if(nextCount % 3 === 0){
-      setCelebration('streamers');
-    }else{
-      setCelebration('');
-    }
-  }
-  say(current.question.answer, learnerLanguage);
-}
+
 
              {page==='library'&&<section className="parent"><div className="heading-row"><div><h1>Learning library</h1><p className="muted">Sample lessons and published TilliTalk lessons. Private drafts stay in the administrator dashboard.</p><div className="language-picker"><label>Learning language <select value={learnerLanguage} onChange={e=>setLearnerLanguage(e.target.value)}>{languages.map(([code,name])=><option key={code} value={code}>{name}</option>)}</select></label></div>{publicLoading&&<p role="status">Loading published lessons…</p>}{publicError&&<p role="alert" className="warning">{publicError}</p>}</div></div><div className="library-grid">{all.map(item=><article className="media-card" key={item.id}><Media item={item} src={srcFor(item)}/><div className="card-info"><h3>{item.title}</h3><p className="muted">{item.questions.length} questions · {item.type}</p></div></article>)}</div></section>}
        {page==='admin'&&<section className="parent"><h1>🔒 TilliTalk administrator</h1>
