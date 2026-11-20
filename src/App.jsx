@@ -38,6 +38,7 @@ export default function App(){
   const [uploadFiles,setUploadFiles]=useState([]);
   const [uploadStatus,setUploadStatus]=useState([]);
   const [uploading,setUploading]=useState(false);
+  const [dragActive,setDragActive]=useState(false);
   const [urls,setUrls]=useState({});
   const [page,setPage]=useState('home');
   const [editing,setEditing]=useState(null);
@@ -91,6 +92,16 @@ export default function App(){
     setAdminMessage(error?'Sign-in failed: '+error.message:'Signed in. Checking administrator access…');
   }
   async function signOut(){await supabase.auth.signOut();setAdminMessage('Signed out.');}
+  function selectUploadFiles(files){
+    if(uploading)return;
+    const accepted=Array.from(files||[]).filter(f=>f.type.startsWith('image/')||f.type.startsWith('video/')||/\.(gif|png|jpe?g|webp|bmp|avif|mp4|webm|mov|m4v)$/i.test(f.name));
+    setUploadFiles(old=>{
+      const seen=new Set(old.map(f=>`${f.name}:${f.size}:${f.lastModified}`));
+      return [...old,...accepted.filter(f=>!seen.has(`${f.name}:${f.size}:${f.lastModified}`))];
+    });
+    setUploadStatus([]);
+    setAdminMessage(accepted.length===0?'No supported pictures or videos found.':'');
+  }
   async function uploadAll(){
     if(!adminAllowed||uploading||!uploadFiles.length)return;
     setUploading(true);setAdminMessage('Uploading files. Keep this tab open.');
@@ -138,7 +149,16 @@ export default function App(){
          {!session?<form className="admin-panel" onSubmit={signIn}><h2>Sign in</h2><p className="muted">Use the administrator account you created in Supabase.</p><label>Email<input type="email" autoComplete="username" required value={email} onChange={e=>setEmail(e.target.value)}/></label><label>Password<input type="password" autoComplete="current-password" required value={password} onChange={e=>setPassword(e.target.value)}/></label><button className="primary" type="submit">Sign in</button></form>:
          <><div className="heading-row"><p className="muted">Signed in as {session.user.email}</p><button onClick={signOut}>Sign out</button></div>
            {adminChecking?<p>Checking administrator access…</p>:!adminAllowed?<div className="warning">This account is not on the TilliTalk administrator list. Sign in with the account you registered in Supabase.</div>:
-           <><div className="admin-panel"><h2>Bulk upload pictures, GIFs and videos</h2><p className="muted">Choose multiple files together. Each file is saved as a private draft. Nothing is published automatically.</p><input type="file" accept="image/*,video/*" multiple disabled={uploading} onChange={e=>{setUploadFiles(Array.from(e.target.files||[]));setUploadStatus([]);}}/><p>{uploadFiles.length} files selected</p><button className="primary" disabled={!uploadFiles.length||uploading} onClick={uploadAll}>{uploading?'Uploading…':`Upload ${uploadFiles.length} files`}</button><p className="muted">Upload files up to 50 MB each. Your Supabase project may have a lower storage upload limit. Keep this tab open until uploads finish.</p></div>
+           <><div className="admin-panel"><h2>Bulk upload pictures, GIFs and videos</h2><p className="muted">Choose multiple files together. Each file is saved as a private draft. Nothing is published automatically.</p><div className={'upload-dropzone'+(dragActive?' is-dragging':'')+(uploading?' is-disabled':'')}
+             onDragEnter={e=>{e.preventDefault();e.stopPropagation();if(!uploading)setDragActive(true);}}
+             onDragOver={e=>{e.preventDefault();e.stopPropagation();if(!uploading)setDragActive(true);}}
+             onDragLeave={e=>{e.preventDefault();e.stopPropagation();if(!e.currentTarget.contains(e.relatedTarget))setDragActive(false);}}
+             onDrop={e=>{e.preventDefault();e.stopPropagation();setDragActive(false);selectUploadFiles(e.dataTransfer.files);}}>
+             <div className="upload-dropzone-icon" aria-hidden="true">📂</div>
+             <strong>Drag pictures, GIFs or videos here</strong>
+             <span>or choose files from your computer</span>
+             <label className="upload-choose-button">Choose files<input type="file" accept="image/*,video/*,.mov,.m4v" multiple disabled={uploading} onChange={e=>{selectUploadFiles(e.target.files);e.target.value='';}}/></label>
+           </div><p>{uploadFiles.length} files selected {uploadFiles.length>0&&<button type="button" disabled={uploading} onClick={()=>{setUploadFiles([]);setUploadStatus([]);}}>Clear selection</button>}</p><button className="primary" disabled={!uploadFiles.length||uploading} onClick={uploadAll}>{uploading?'Uploading…':`Upload ${uploadFiles.length} files`}</button><p className="muted">Upload files up to 50 MB each. Your Supabase project may have a lower storage upload limit. Keep this tab open until uploads finish.</p></div>
            {!!uploadStatus.length&&<div className="admin-panel"><h2>Upload results</h2><ul className="upload-results">{uploadStatus.map((x,i)=><li key={i}><span>{x.name}</span><span>{x.status}</span></li>)}</ul></div>}
            <div className="admin-panel"><h2>Master library — {cloudMedia.length} items</h2><p className="muted">Draft media is stored in Supabase, but it will not appear in the children's game until we add questions and publish it.</p><ul className="upload-results">{cloudMedia.map(x=><li key={x.id}><span>{x.title}</span><span>{x.is_published?'Published':'Draft'}</span></li>)}</ul></div></>}
          </>}
