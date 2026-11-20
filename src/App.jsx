@@ -133,6 +133,16 @@ const languages = [
   
   const [correctCount, setCorrectCount] = useState(0);
   const [celebration, setCelebration] = useState('');
+  
+useEffect(() => {
+  if (!celebration) return;
+
+  const timer = setTimeout(() => {
+    setCelebration('');
+  }, 5000);
+
+  return () => clearTimeout(timer);
+}, [celebration]);
 
   const all=useMemo(()=>[...sample,...library,...publishedLessons], [library,publishedLessons]);
   useEffect(()=>{localStorage.setItem(LIBRARY_KEY,JSON.stringify(library));},[library]);
@@ -325,7 +335,19 @@ useEffect(() => {
   async function save(){if(!draft.title.trim()){setError('Please give this picture or video a title.');return;}if(!draft.questions.length||draft.questions.some(q=>!q.question.trim()||!q.answer.trim())){setError('Every question needs both a question and a correct answer.');return;}if(!editing&&!file){setError('Please choose a picture or video.');return;}try{if(file)await dbPut(draft.id,file);const entry={id:draft.id,title:draft.title.trim(),type:file?(file.type.startsWith('video/')?'video':'image'):draft.type,questions:draft.questions,url:undefined};setLibrary(old=>[...old.filter(x=>x.id!==entry.id),entry]);setPage('library');setError('');}catch(e){setError('Could not save this file. Your browser storage may be full. Try a smaller video.');}}
   async function remove(item){if(!window.confirm(`Delete “${item.title}” and all its questions?`))return;try{await dbDelete(item.id);}catch{}setLibrary(x=>x.filter(y=>y.id!==item.id));}
   const count=all.reduce((sum,x)=>sum+x.questions.length,0);
-  return <div className="app">
+ 
+return <div className="app">
+  {page === 'play' && celebration === 'streamers' && (
+    <div className="streamer-celebration" aria-label="Celebration!" role="status">
+      <span>🎊</span>
+      <span>🎉</span>
+      <span>✨</span>
+      <span>🎊</span>
+      <span>🎉</span>
+      <strong>Hooray! You're a star!</strong>
+    </div>
+  )}
+
     <header className="topbar">
   <button className="brand" onClick={()=>setPage('home')}>
     <img
