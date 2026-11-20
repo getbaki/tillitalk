@@ -346,7 +346,22 @@ useEffect(() => {
 {correct
   ? correctMessages[step % correctMessages.length]
   : tryAgainMessages[step % tryAgainMessages.length]}
-</div>}<div className="actions"><button onClick={()=>{setPicked([]);setChecked(false);}}>Clear</button>{correct?<button className="primary" onClick={()=>{window.speechSynthesis.cancel();setStep(s=>s+1);setPicked([]);setChecked(false);}}>Next ➜</button>:<button className="primary" disabled={!picked.length} onClick={()=>{setChecked(true);if(picked.length===answerWords.length&&picked.every((x,i)=>x.word===answerWords[i]))say(current.question.answer, learnerLanguage);}}>Check answer</button>}</div></div></>}</section>}
+
+if(picked.length===answerWords.length&&picked.every((x,i)=>x.word===answerWords[i])){
+  if(!checked){
+    const nextCount = correctCount + 1;
+    setCorrectCount(nextCount);
+    if(nextCount % 9 === 0){
+      setCelebration('band');
+    }else if(nextCount % 3 === 0){
+      setCelebration('streamers');
+    }else{
+      setCelebration('');
+    }
+  }
+  say(current.question.answer, learnerLanguage);
+}
+
              {page==='library'&&<section className="parent"><div className="heading-row"><div><h1>Learning library</h1><p className="muted">Sample lessons and published TilliTalk lessons. Private drafts stay in the administrator dashboard.</p><div className="language-picker"><label>Learning language <select value={learnerLanguage} onChange={e=>setLearnerLanguage(e.target.value)}>{languages.map(([code,name])=><option key={code} value={code}>{name}</option>)}</select></label></div>{publicLoading&&<p role="status">Loading published lessons…</p>}{publicError&&<p role="alert" className="warning">{publicError}</p>}</div></div><div className="library-grid">{all.map(item=><article className="media-card" key={item.id}><Media item={item} src={srcFor(item)}/><div className="card-info"><h3>{item.title}</h3><p className="muted">{item.questions.length} questions · {item.type}</p></div></article>)}</div></section>}
        {page==='admin'&&<section className="parent"><h1>🔒 TilliTalk administrator</h1>
          {!session?<form className="admin-panel" onSubmit={signIn}><h2>Sign in</h2><p className="muted">Use the administrator account you created in Supabase.</p><label>Email<input type="email" autoComplete="username" required value={email} onChange={e=>setEmail(e.target.value)}/></label><label>Password<input type="password" autoComplete="current-password" required value={password} onChange={e=>setPassword(e.target.value)}/></label><button className="primary" type="submit">Sign in</button></form>:
