@@ -51,7 +51,23 @@ export default function App(){
   const [publishedLessons,setPublishedLessons]=useState([]);
   const [publicLoading,setPublicLoading]=useState(false);
   const [publicError,setPublicError]=useState('');
-  const languages=[['en','English'],['nl','Dutch'],['fr','French'],['sw','Swahili'],['zh','Mandarin Chinese'],['es','Spanish'],['de','German'],['ar','Arabic']];
+  
+const languages = [
+  ['en', 'English'],
+  ['nl', 'Dutch'],
+  ['fr', 'French'],
+  ['es', 'Spanish'],
+  ['de', 'German'],
+  ['pt', 'Portuguese'],
+  ['ar', 'Arabic'],
+  ['sw', 'Swahili'],
+  ['ig', 'Igbo'],
+  ['yo', 'Yoruba'],
+  ['ha', 'Hausa'],
+  ['zh', 'Mandarin Chinese (Pinyin)'],
+  ['ru', 'Russian']
+];
+
   const [urls,setUrls]=useState({});
   const [page,setPage]=useState('home');
   const [editing,setEditing]=useState(null);
