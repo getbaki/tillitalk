@@ -51,6 +51,29 @@ function say(text, language = 'en') {
   window.speechSynthesis.speak(utterance);
 }
 
+
+const correctMessages = [
+  '🌟 Wonderful!',
+  '👏 Good job!',
+  '🎉 You did it!',
+  "💛 You're doing so well!",
+  '⭐ Fantastic!',
+  '🦊 Clever thinking!',
+  '✨ Brilliant!',
+  '🥳 Amazing work!',
+  '🌈 Keep shining!'
+];
+
+const tryAgainMessages = [
+  "💛 Don't worry, you'll get it!",
+  '🌈 Good try! Have another go.',
+  '🦊 Keep going! You can do it!',
+  "🌟 You're learning! Try again.",
+  '💪 Take your time. You can do this!',
+  '💕 Every try helps you learn!'
+];
+
+
 function newQuestion(){return {id:id(),question:'',answer:'',distractors:''};}
 function makePlan(items){const queues=shuffle(items.filter(x=>x.questions?.some(q=>q.question.trim()&&q.answer.trim()))).map(item=>({item,questions:shuffle(item.questions.filter(q=>q.question.trim()&&q.answer.trim()))}));const plan=[];while(queues.some(x=>x.questions.length)){for(const q of queues){const count=Math.min(q.questions.length,Math.random()<.5?1:2);for(let i=0;i<count;i++)plan.push({mediaId:q.item.id,question:q.questions.shift()});}}return plan;}
 function Media({item,src}){if(!src)return <div className="media-placeholder">🖼️ Add a picture or video</div>;return item.type==='video'?<video key={src} src={src} controls playsInline preload="metadata" className="lesson-media"/>:<img className="lesson-media" src={src} alt={item.title}/>;}
