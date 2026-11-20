@@ -279,6 +279,20 @@ try {
   const correct=checked&&picked.length===answerWords.length&&picked.every((x,i)=>x.word===answerWords[i]);
   async function start(){const lessons=await loadPublishedLessons()||[];const p=makePlan([...sample,...library,...lessons]);setPlan(p);setStep(0);setPicked([]);setChecked(false);setWordOrder([]);setPage('play');}
   useEffect(()=>{if(!current)return;const words=current.question.answer.trim().split(/\s+/).filter(Boolean).map((word,i)=>({id:`a${i}`,word}));const extra=current.question.distractors.split(',').map(x=>x.trim()).filter(Boolean).map((word,i)=>({id:`e${i}`,word}));setWordOrder(shuffle([...words,...extra]));},[step,plan]);
+  
+useEffect(() => {
+  if (page !== 'play' || !current) return;
+
+  const timer = setTimeout(() => {
+    say(current.question.question, learnerLanguage);
+  }, 400);
+
+  return () => {
+    clearTimeout(timer);
+    window.speechSynthesis?.cancel();
+  };
+}, [page, step, plan, learnerLanguage]);
+
   function openEditor(item){setEditing(item?.id||null);setDraft(item?{...item,questions:item.questions.map(q=>({...q}))}:{id:id(),title:'',type:'image',questions:[newQuestion()]});setFile(null);setError('');setPage('edit');}
   function updateQuestion(qid,field,value){setDraft(d=>({...d,questions:d.questions.map(q=>q.id===qid?{...q,[field]:value}:q)}));}
   async function save(){if(!draft.title.trim()){setError('Please give this picture or video a title.');return;}if(!draft.questions.length||draft.questions.some(q=>!q.question.trim()||!q.answer.trim())){setError('Every question needs both a question and a correct answer.');return;}if(!editing&&!file){setError('Please choose a picture or video.');return;}try{if(file)await dbPut(draft.id,file);const entry={id:draft.id,title:draft.title.trim(),type:file?(file.type.startsWith('video/')?'video':'image'):draft.type,questions:draft.questions,url:undefined};setLibrary(old=>[...old.filter(x=>x.id!==entry.id),entry]);setPage('library');setError('');}catch(e){setError('Could not save this file. Your browser storage may be full. Try a smaller video.');}}
