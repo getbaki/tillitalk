@@ -391,3 +391,112 @@ select:focus-visible {
   }
 }
 
+
+/* TilliTalk wild-animal marching band */
+
+.animal-band {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.band-message {
+  position: absolute;
+  top: 18%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: 90%;
+  padding: 16px 24px;
+  background: #FFF8ED;
+  border: 3px solid #F2A65A;
+  border-radius: 24px;
+  color: #128D88;
+  font-size: clamp(20px, 5vw, 34px);
+  font-weight: 800;
+  text-align: center;
+  box-shadow: 0 8px 30px #17345B22;
+  animation: band-message-pop 5s ease-in-out forwards;
+}
+
+.band-parade {
+  position: absolute;
+  bottom: 8%;
+  left: 0;
+  display: flex;
+  align-items: flex-end;
+  gap: 24px;
+  width: max-content;
+  animation: band-march 5s linear forwards;
+}
+
+.band-parade span {
+  display: inline-block;
+  font-size: clamp(38px, 7vw, 76px);
+  white-space: nowrap;
+  animation: band-bounce 0.45s ease-in-out infinite alternate;
+}
+
+.band-parade span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.band-parade span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+.band-parade span:nth-child(4) {
+  animation-delay: 0.1s;
+}
+
+@keyframes band-march {
+  from {
+    transform: translateX(100vw);
+  }
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+@keyframes band-bounce {
+  from {
+    transform: translateY(0) rotate(-5deg);
+  }
+  to {
+    transform: translateY(-15px) rotate(5deg);
+  }
+}
+
+@keyframes band-message-pop {
+  0% {
+    opacity: 0;
+    scale: 0.5;
+  }
+  15% {
+    opacity: 1;
+    scale: 1;
+  }
+  80% {
+    opacity: 1;
+    scale: 1;
+  }
+  100% {
+    opacity: 0;
+    scale: 0.9;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .band-parade,
+  .band-parade span,
+  .band-message {
+    animation: none;
+  }
+
+  .band-parade {
+    left: 50%;
+    transform: translateX(-50%);
+  }
+}
