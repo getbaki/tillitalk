@@ -160,8 +160,21 @@ export default function App(){
     let missingMediaAccess=false;
     const withUrls=await Promise.all((media||[]).map(async m=>{
       // Public media is served only after the server confirms that it is published.
-      try{const url=new URL(import.meta.env.VITE_SUPABASE_URL+'/functions/v1/smart-worker');url.searchParams.set('media_id',m.id);
-        const response=await fetch(url,{headers:{apikey:import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}});
+     
+try {
+  const url = new URL(
+    import.meta.env.VITE_SUPABASE_URL + '/functions/v1/smart-worker'
+  );
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
+    },
+    body: JSON.stringify({ media_id: m.id })
+  });
+
         if(!response.ok){missingMediaAccess=true;return null;}const payload=await response.json();
         return {id:m.id,title:m.title,type:m.media_type,url:payload.url,questions:(questions||[]).filter(q=>q.media_id===m.id&&q.language===learnerLanguage).map(q=>({id:q.id,question:q.question_text,answer:q.correct_answer,distractors:(q.distractors||[]).join(', ')}))};
       }catch{missingMediaAccess=true;return null;}
