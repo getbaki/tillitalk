@@ -241,7 +241,20 @@ try {
   async function remove(item){if(!window.confirm(`Delete “${item.title}” and all its questions?`))return;try{await dbDelete(item.id);}catch{}setLibrary(x=>x.filter(y=>y.id!==item.id));}
   const count=all.reduce((sum,x)=>sum+x.questions.length,0);
   return <div className="app">
-    <header className="topbar"><button className="brand" onClick={()=>setPage('home')}>🌈 TilliTalk</button><nav><button onClick={()=>setPage('home')}>Home</button><button onClick={()=>setPage('library')}>Demo library</button><button onClick={()=>setPage('admin')}>Admin</button></nav></header>
+    <header className="topbar">
+  <button className="brand" onClick={()=>setPage('home')}>
+    <img
+      src="/tillitalk-logo.png"
+      alt="TilliTalk"
+      style={{height:'64px',width:'auto',maxWidth:'100%',objectFit:'contain'}}
+    />
+  </button>
+  <nav>
+    <button onClick={()=>setPage('home')}>Home</button>
+    <button onClick={()=>setPage('library')}>Demo library</button>
+    <button onClick={()=>setPage('admin')}>Admin</button>
+  </nav>
+</header>
     <main>
       {page==='home'&&<section className="hero"><div className="hero-emoji">🐶 💬 🌟</div><h1>Let's talk!</h1><p>Look, listen, and make sentences with words.</p><div className="language-picker"><label>Learning language <select value={learnerLanguage} onChange={e=>setLearnerLanguage(e.target.value)}>{languages.map(([code,name])=><option key={code} value={code}>{name}</option>)}</select></label></div><button className="primary big" disabled={publicLoading} onClick={start}>{publicLoading?'Loading lessons…':'▶ Start learning'}</button><p className="muted">{all.length} pictures & videos · {count} questions</p><div className="hint">Questions switch pictures after 1–2 turns, then revisit earlier pictures.</div></section>}
       {page==='play'&&<section className="play-area">{!current?<div className="hero"><h1>🎉 Amazing work!</h1><p>You finished this round.</p><button className="primary" onClick={start}>Play again</button><button onClick={()=>setPage('home')}>Home</button></div>:<><div className="progress"><span>Question {step+1} of {plan.length}</span><div className="progress-track"><div style={{width:`${(step/plan.length)*100}%`}}/></div></div><div className="play-card"><Media item={currentItem} src={srcFor(currentItem)}/><div className="question-line"><h2>{current.question.question}</h2><button aria-label="Hear question" className="sound" onClick={()=>say(current.question.question)}>🔊</button></div><p className="muted">Tap the words in the right order.</p><div className="answer-zone">{picked.length?picked.map(x=><button key={x.id} className="word selected" onClick={()=>{setPicked(p=>p.filter(w=>w.id!==x.id));setChecked(false);}}>{x.word}</button>):<span className="muted">Your sentence goes here…</span>}</div><div className="word-bank">{wordOrder.filter(x=>!picked.some(p=>p.id===x.id)).map(x=><button key={x.id} className="word" onClick={()=>{setPicked(p=>[...p,x]);setChecked(false);say(x.word);}}>{x.word}</button>)}</div>{checked&&<div role="status" className={'feedback '+(correct?'good':'try')}>{correct?'🌟 Well done!':'💛 Good try! Tap the words to change your answer.'}</div>}<div className="actions"><button onClick={()=>{setPicked([]);setChecked(false);}}>Clear</button>{correct?<button className="primary" onClick={()=>{say(current.question.answer);setStep(s=>s+1);setPicked([]);setChecked(false);}}>Next ➜</button>:<button className="primary" disabled={!picked.length} onClick={()=>{setChecked(true);if(picked.length===answerWords.length&&picked.every((x,i)=>x.word===answerWords[i]))say(current.question.answer);}}>Check answer</button>}</div></div></>}</section>}
