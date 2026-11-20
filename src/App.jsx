@@ -348,6 +348,21 @@ return <div className="app">
     </div>
   )}
 
+  {page === 'play' && celebration === 'band' && (
+    <div className="animal-band" role="status" aria-label="Animal marching band celebration">
+      <div className="band-message">
+        🎉 Nine stars! Amazing work! 🎉
+      </div>
+      <div className="band-parade">
+        <span>🐘🥁</span>
+        <span>🦁🎺</span>
+        <span>🦒🥁</span>
+        <span>🐒🚩</span>
+      </div>
+    </div>
+  )}
+
+  
     <header className="topbar">
   <button className="brand" onClick={()=>setPage('home')}>
     <img
