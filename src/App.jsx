@@ -23,7 +23,7 @@ async function dbGet(key){const db=await openDb();return new Promise((resolve,re
 async function dbDelete(key){const db=await openDb();return new Promise((resolve,reject)=>{const tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).delete(key);tx.oncomplete=()=>{db.close();resolve();};tx.onerror=()=>{db.close();reject(tx.error);};});}
 function shuffle(arr){const a=[...arr];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
 
-function say(text, language = 'en') {
+function say(text, language = 'en', volume = 1) {
   if (!('speechSynthesis' in window)) return;
 
   const speechLanguages = {
@@ -47,6 +47,7 @@ function say(text, language = 'en') {
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = speechLanguages[language] || 'en-GB';
   utterance.rate = 0.85;
+  utterance.volume = Math.max(0, Math.min(1, volume));
 
   window.speechSynthesis.speak(utterance);
 }
@@ -95,6 +96,22 @@ export default function App(){
   const [cloudQuestions,setCloudQuestions]=useState([]);
   const [lessonLanguage,setLessonLanguage]=useState('en');
   const [learnerLanguage,setLearnerLanguage]=useState('en');
+  const [voiceMuted, setVoiceMuted] = useState(() => localStorage.getItem('tillitalk-voice-muted') === 'true');
+  const [voiceVolume, setVoiceVolume] = useState(() => {
+    const saved = Number(localStorage.getItem('tillitalk-voice-volume'));
+    return Number.isFinite(saved) && saved >= 0 && saved <= 1 ? saved : 1;
+  });
+  function speak(text, language = learnerLanguage) {
+    if (!voiceMuted && voiceVolume > 0) say(text, language, voiceVolume);
+  }
+  function toggleMute() {
+    setVoiceMuted(previous => {
+      if (!previous) window.speechSynthesis?.cancel();
+      return !previous;
+    });
+  }
+  useEffect(() => { localStorage.setItem('tillitalk-voice-muted', String(voiceMuted)); }, [voiceMuted]);
+  useEffect(() => { localStorage.setItem('tillitalk-voice-volume', String(voiceVolume)); }, [voiceVolume]);
   const [lessonMode,setLessonMode]=useState('helper');
   const [helperLanguage,setHelperLanguage]=useState('en');
   const [lessonBusy,setLessonBusy]=useState(false);
@@ -321,7 +338,7 @@ useEffect(() => {
   if (page !== 'play' || !current) return;
 
   const timer = setTimeout(() => {
-    say(current.question.question, learnerLanguage);
+    speak(current.question.question, learnerLanguage);
   }, 400);
 
   return () => {
@@ -384,6 +401,20 @@ return <div className="app">
       {page==='home'&&<section className="hero"><div className="hero-emoji">🐶 💬 🌟</div><h1>Let's talk!</h1><p>Look, listen, and make sentences with words.</p><div className="language-picker"><label>Learning language <select value={learnerLanguage} onChange={e=>setLearnerLanguage(e.target.value)}>{languages.map(([code,name])=><option key={code} value={code}>{name}</option>)}</select></label></div><button className="primary big" disabled={publicLoading} onClick={start}>{publicLoading?'Loading lessons…':'▶ Start learning'}</button><p className="muted">{all.length} pictures & videos · {count} questions</p><div className="hint">Questions switch pictures after 1–2 turns, then revisit earlier pictures.</div></section>}
       {page === 'play' && (
         <section className="play-area">
+          <div aria-label="Voice controls" style={{display:'flex',alignItems:'center',gap:'12px',flexWrap:'wrap',justifyContent:'flex-end',padding:'8px 0 16px'}}>
+            <button type="button" onClick={toggleMute} aria-label={voiceMuted ? 'Unmute voice' : 'Mute voice'} aria-pressed={voiceMuted} style={{padding:'9px 14px',borderRadius:'12px'}}>
+              {voiceMuted ? '🔇 Unmute' : '🔊 Mute'}
+            </button>
+            <label htmlFor="voice-volume" style={{display:'flex',alignItems:'center',gap:'9px'}}>
+              Volume
+              <input id="voice-volume" type="range" min="0" max="100" step="5" value={Math.round(voiceVolume * 100)} onChange={e => {
+                const next = Number(e.target.value) / 100;
+                setVoiceVolume(next);
+                if (next === 0) window.speechSynthesis?.cancel();
+              }} aria-label="Voice volume" style={{width:'110px'}} />
+              <span style={{minWidth:'40px'}}>{Math.round(voiceVolume * 100)}%</span>
+            </label>
+          </div>
           {!current ? (
             <div className="hero">
               <h1>🎉 Amazing work!</h1>
@@ -403,7 +434,7 @@ return <div className="app">
                 <Media item={currentItem} src={srcFor(currentItem)} />
                 <div className="question-line">
                   <h2>{current.question.question}</h2>
-                  <button aria-label="Hear question" className="sound" onClick={() => say(current.question.question, learnerLanguage)}>🔊</button>
+                  <button aria-label="Hear question" className="sound" onClick={() => speak(current.question.question, learnerLanguage)}>🔊</button>
                 </div>
                 <p className="muted">Tap the words in the right order.</p>
                 <div className="answer-zone">
@@ -419,7 +450,7 @@ return <div className="app">
                     <button key={x.id} className="word" onClick={() => {
                       setPicked(p => [...p, x]);
                       setChecked(false);
-                      say(x.word, learnerLanguage);
+                      speak(x.word, learnerLanguage);
                     }}>{x.word}</button>
                   ))}
                 </div>
@@ -449,7 +480,7 @@ return <div className="app">
                         setCorrectCount(nextCount);
                         if (nextCount % 9 === 0) setCelebration('band');
                         else if (nextCount % 3 === 0) setCelebration('streamers');
-                        say(current.question.answer, learnerLanguage);
+                        speak(current.question.answer, learnerLanguage);
                       }
                     }}>Check answer</button>
                   )}
