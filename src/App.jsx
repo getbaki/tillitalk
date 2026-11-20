@@ -39,6 +39,18 @@ export default function App(){
   const [uploadStatus,setUploadStatus]=useState([]);
   const [uploading,setUploading]=useState(false);
   const [dragActive,setDragActive]=useState(false);
+  const [selectedMedia,setSelectedMedia]=useState(null);
+  const [mediaPreview,setMediaPreview]=useState('');
+  const [cloudQuestions,setCloudQuestions]=useState([]);
+  const [lessonLanguage,setLessonLanguage]=useState('en');
+  const [learnerLanguage,setLearnerLanguage]=useState('en');
+  const [lessonMode,setLessonMode]=useState('helper');
+  const [helperLanguage,setHelperLanguage]=useState('en');
+  const [lessonBusy,setLessonBusy]=useState(false);
+  const [lessonMessage,setLessonMessage]=useState('');
+  const [publishedLessons,setPublishedLessons]=useState([]);
+  const [publicLoading,setPublicLoading]=useState(false);
+  const languages=[['en','English'],['nl','Dutch'],['fr','French'],['sw','Swahili'],['zh','Mandarin Chinese'],['es','Spanish'],['de','German'],['ar','Arabic']];
   const [urls,setUrls]=useState({});
   const [page,setPage]=useState('home');
   const [editing,setEditing]=useState(null);
@@ -50,7 +62,7 @@ export default function App(){
   const [picked,setPicked]=useState([]);
   const [checked,setChecked]=useState(false);
   const [wordOrder,setWordOrder]=useState([]);
-  const all=useMemo(()=>[...sample,...library], [library]);
+  const all=useMemo(()=>[...sample,...library,...publishedLessons], [library,publishedLessons]);
   useEffect(()=>{localStorage.setItem(LIBRARY_KEY,JSON.stringify(library));},[library]);
   useEffect(()=>{let active=true;const made=[];(async()=>{const map={};for(const item of library){try{const blob=await dbGet(item.id);if(blob){const url=URL.createObjectURL(blob);made.push(url);map[item.id]=url;}}catch{}}if(active)setUrls(map);else made.forEach(URL.revokeObjectURL);})();return()=>{active=false;made.forEach(URL.revokeObjectURL);};},[library]);
   useEffect(()=>{
@@ -85,6 +97,74 @@ export default function App(){
       });
     return()=>{cancelled=true;};
   },[adminAllowed]);
+  async function openCloudEditor(item){
+    setSelectedMedia(item);setCloudQuestions([]);setMediaPreview('');setLessonMessage('Loading lesson…');setPage('cloud-edit');
+    const [{data:questions,error:questionError},{data:preview,error:previewError}]=await Promise.all([
+      supabase.from('questions').select('id,question_text,correct_answer,distractors,tense,category,presentation_mode,is_published,language').eq('media_id',item.id).order('created_at'),
+      supabase.storage.from('lesson-media').createSignedUrl(item.storage_path,3600)
+    ]);
+    if(questionError)setLessonMessage('Cannot load questions: '+questionError.message);
+    else {setCloudQuestions(questions||[]);setLessonMessage('');}
+    if(previewError)setLessonMessage('Cannot preview media: '+previewError.message);
+    else setMediaPreview(preview?.signedUrl||'');
+  }
+  function blankCloudQuestion(){return {id:'new-'+id(),question_text:'',correct_answer:'',distractors:[],tense:'present_continuous',category:'what',presentation_mode:'visible',is_published:false,language:lessonLanguage};}
+  function changeCloudQuestion(qid,field,value){setCloudQuestions(old=>old.map(q=>q.id===qid?{...q,[field]:value}:q));}
+  async function saveCloudQuestions(){
+    if(!selectedMedia||lessonBusy)return;
+    if(cloudQuestions.some(q=>!q.question_text.trim()||!q.correct_answer.trim())){setLessonMessage('Please fill in every question and answer, or remove empty questions.');return;}
+    setLessonBusy(true);setLessonMessage('Saving questions…');
+    try{
+      const existing=cloudQuestions.filter(q=>!q.id.startsWith('new-'));
+      const added=cloudQuestions.filter(q=>q.id.startsWith('new-'));
+      const toRecord=q=>({media_id:selectedMedia.id,question_text:q.question_text.trim(),correct_answer:q.correct_answer.trim(),distractors:Array.isArray(q.distractors)?q.distractors:q.distractors.split(',').map(x=>x.trim()).filter(Boolean),tense:q.tense,category:q.category,presentation_mode:q.presentation_mode,language:q.language,is_published:!!q.is_published});
+      for(const q of existing){const {error}=await supabase.from('questions').update(toRecord(q)).eq('id',q.id);if(error)throw error;}
+      if(added.length){const {error}=await supabase.from('questions').insert(added.map(toRecord));if(error)throw error;}
+      const {data,error}=await supabase.from('questions').select('id,question_text,correct_answer,distractors,tense,category,presentation_mode,is_published,language').eq('media_id',selectedMedia.id).order('created_at');
+      if(error)throw error;setCloudQuestions(data||[]);setLessonMessage('Questions saved.');
+    }catch(e){setLessonMessage('Could not save: '+e.message);}finally{setLessonBusy(false);}
+  }
+  async function generateCloudQuestions(){
+    if(!selectedMedia||lessonBusy)return;
+    if(selectedMedia.media_type==='video'){setLessonMessage('AI analysis of videos is not available yet. You can still add questions manually.');return;}
+    setLessonBusy(true);setLessonMessage('AI is examining the picture. This may take a moment…');
+    try{
+      const {data,error}=await supabase.functions.invoke('generate-questions',{body:{media_id:selectedMedia.id,language:lessonLanguage}});
+      if(error)throw new Error(data?.error||error.message);
+      if(data?.error)throw new Error(data.error);
+      if(!Array.isArray(data?.questions)||!data.questions.length)throw new Error('No questions returned.');
+      const suggestions=data.questions.map(q=>({...blankCloudQuestion(),question_text:q.question_text||'',correct_answer:q.correct_answer||'',distractors:Array.isArray(q.distractors)?q.distractors:[],tense:q.tense||'present_continuous',category:q.category||'what',presentation_mode:q.presentation_mode||'visible',language:lessonLanguage}));
+      setCloudQuestions(old=>[...old,...suggestions]);setLessonMessage(`${suggestions.length} AI suggestions added. Review and save them before publishing.`);
+    }catch(e){setLessonMessage('AI generation unavailable: '+e.message+' Check the Edge Function setup instructions.');}
+    finally{setLessonBusy(false);}
+  }
+  async function publishCloudLesson(){
+    if(!selectedMedia||lessonBusy)return;
+    if(cloudQuestions.some(q=>q.id.startsWith('new-'))){setLessonMessage('Save your questions before publishing.');return;}
+    const approved=cloudQuestions.filter(q=>q.is_published);
+    if(!approved.length){setLessonMessage('Tick at least one approved question before publishing.');return;}
+    setLessonBusy(true);
+    const {error}=await supabase.from('media').update({is_published:true}).eq('id',selectedMedia.id);
+    if(error)setLessonMessage('Could not publish: '+error.message);
+    else{setSelectedMedia(m=>({...m,is_published:true}));setCloudMedia(old=>old.map(m=>m.id===selectedMedia.id?{...m,is_published:true}:m));setLessonMessage('Lesson published! Approved questions can now be used by learners.');}
+    setLessonBusy(false);
+  }
+  async function loadPublishedLessons(){
+    setPublicLoading(true);
+    const {data:media,error:mediaError}=await supabase.from('media').select('id,title,media_type,storage_path').eq('is_published',true);
+    if(mediaError){setPublicLoading(false);return;}
+    const {data:questions,error:questionError}=await supabase.from('questions').select('id,media_id,question_text,correct_answer,distractors,language').eq('is_published',true);
+    if(questionError){setPublicLoading(false);return;}
+    const withUrls=await Promise.all((media||[]).map(async m=>{
+      // Public media is served only after the server confirms that it is published.
+      try{const url=new URL(import.meta.env.VITE_SUPABASE_URL+'/functions/v1/published-media');url.searchParams.set('media_id',m.id);
+        const response=await fetch(url,{headers:{apikey:import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}});
+        if(!response.ok)return null;const payload=await response.json();
+        return {id:m.id,title:m.title,type:m.media_type,url:payload.url,questions:(questions||[]).filter(q=>q.media_id===m.id&&q.language===learnerLanguage).map(q=>({id:q.id,question:q.question_text,answer:q.correct_answer,distractors:(q.distractors||[]).join(', ')}))};
+      }catch{return null;}
+    }));
+    const lessons=withUrls.filter(Boolean);setPublishedLessons(lessons);setPublicLoading(false);return lessons;
+  }
   async function signIn(e){
     e.preventDefault();setAdminMessage('Signing in…');
     const {error}=await supabase.auth.signInWithPassword({email:email.trim(),password});
@@ -132,7 +212,7 @@ export default function App(){
   const current=plan[step];const currentItem=all.find(x=>x.id===current?.mediaId);
   const answerWords=current?.question.answer.trim().split(/\s+/).filter(Boolean)||[];
   const correct=checked&&picked.length===answerWords.length&&picked.every((x,i)=>x.word===answerWords[i]);
-  function start(){const p=makePlan(all);setPlan(p);setStep(0);setPicked([]);setChecked(false);setWordOrder([]);setPage('play');}
+  async function start(){const lessons=await loadPublishedLessons()||[];const p=makePlan([...sample,...library,...lessons]);setPlan(p);setStep(0);setPicked([]);setChecked(false);setWordOrder([]);setPage('play');}
   useEffect(()=>{if(!current)return;const words=current.question.answer.trim().split(/\s+/).filter(Boolean).map((word,i)=>({id:`a${i}`,word}));const extra=current.question.distractors.split(',').map(x=>x.trim()).filter(Boolean).map((word,i)=>({id:`e${i}`,word}));setWordOrder(shuffle([...words,...extra]));},[step,plan]);
   function openEditor(item){setEditing(item?.id||null);setDraft(item?{...item,questions:item.questions.map(q=>({...q}))}:{id:id(),title:'',type:'image',questions:[newQuestion()]});setFile(null);setError('');setPage('edit');}
   function updateQuestion(qid,field,value){setDraft(d=>({...d,questions:d.questions.map(q=>q.id===qid?{...q,[field]:value}:q)}));}
@@ -142,7 +222,7 @@ export default function App(){
   return <div className="app">
     <header className="topbar"><button className="brand" onClick={()=>setPage('home')}>🌈 TilliTalk</button><nav><button onClick={()=>setPage('home')}>Home</button><button onClick={()=>setPage('library')}>Demo library</button><button onClick={()=>setPage('admin')}>Admin</button></nav></header>
     <main>
-      {page==='home'&&<section className="hero"><div className="hero-emoji">🐶 💬 🌟</div><h1>Let's talk!</h1><p>Look, listen, and make sentences with words.</p><button className="primary big" onClick={start}>▶ Start learning</button><p className="muted">{all.length} pictures & videos · {count} questions</p><div className="hint">Questions switch pictures after 1–2 turns, then revisit earlier pictures.</div></section>}
+      {page==='home'&&<section className="hero"><div className="hero-emoji">🐶 💬 🌟</div><h1>Let's talk!</h1><p>Look, listen, and make sentences with words.</p><div className="language-picker"><label>Learning language <select value={learnerLanguage} onChange={e=>setLearnerLanguage(e.target.value)}>{languages.map(([code,name])=><option key={code} value={code}>{name}</option>)}</select></label></div><button className="primary big" disabled={publicLoading} onClick={start}>{publicLoading?'Loading lessons…':'▶ Start learning'}</button><p className="muted">{all.length} pictures & videos · {count} questions</p><div className="hint">Questions switch pictures after 1–2 turns, then revisit earlier pictures.</div></section>}
       {page==='play'&&<section className="play-area">{!current?<div className="hero"><h1>🎉 Amazing work!</h1><p>You finished this round.</p><button className="primary" onClick={start}>Play again</button><button onClick={()=>setPage('home')}>Home</button></div>:<><div className="progress"><span>Question {step+1} of {plan.length}</span><div className="progress-track"><div style={{width:`${(step/plan.length)*100}%`}}/></div></div><div className="play-card"><Media item={currentItem} src={srcFor(currentItem)}/><div className="question-line"><h2>{current.question.question}</h2><button aria-label="Hear question" className="sound" onClick={()=>say(current.question.question)}>🔊</button></div><p className="muted">Tap the words in the right order.</p><div className="answer-zone">{picked.length?picked.map(x=><button key={x.id} className="word selected" onClick={()=>{setPicked(p=>p.filter(w=>w.id!==x.id));setChecked(false);}}>{x.word}</button>):<span className="muted">Your sentence goes here…</span>}</div><div className="word-bank">{wordOrder.filter(x=>!picked.some(p=>p.id===x.id)).map(x=><button key={x.id} className="word" onClick={()=>{setPicked(p=>[...p,x]);setChecked(false);say(x.word);}}>{x.word}</button>)}</div>{checked&&<div role="status" className={'feedback '+(correct?'good':'try')}>{correct?'🌟 Well done!':'💛 Good try! Tap the words to change your answer.'}</div>}<div className="actions"><button onClick={()=>{setPicked([]);setChecked(false);}}>Clear</button>{correct?<button className="primary" onClick={()=>{say(current.question.answer);setStep(s=>s+1);setPicked([]);setChecked(false);}}>Next ➜</button>:<button className="primary" disabled={!picked.length} onClick={()=>{setChecked(true);if(picked.length===answerWords.length&&picked.every((x,i)=>x.word===answerWords[i]))say(current.question.answer);}}>Check answer</button>}</div></div></>}</section>}
              {page==='library'&&<section className="parent"><div className="heading-row"><div><h1>Demo library</h1><p className="muted">These are sample lessons and any lessons previously saved in this browser. New uploads go into the private administrator dashboard.</p></div></div><div className="library-grid">{all.map(item=><article className="media-card" key={item.id}><Media item={item} src={srcFor(item)}/><div className="card-info"><h3>{item.title}</h3><p className="muted">{item.questions.length} questions · {item.type}</p></div></article>)}</div></section>}
        {page==='admin'&&<section className="parent"><h1>🔒 TilliTalk administrator</h1>
@@ -160,10 +240,34 @@ export default function App(){
              <label className="upload-choose-button">Choose files<input type="file" accept="image/*,video/*,.mov,.m4v" multiple disabled={uploading} onChange={e=>{selectUploadFiles(e.target.files);e.target.value='';}}/></label>
            </div><p>{uploadFiles.length} files selected {uploadFiles.length>0&&<button type="button" disabled={uploading} onClick={()=>{setUploadFiles([]);setUploadStatus([]);}}>Clear selection</button>}</p><button className="primary" disabled={!uploadFiles.length||uploading} onClick={uploadAll}>{uploading?'Uploading…':`Upload ${uploadFiles.length} files`}</button><p className="muted">Upload files up to 50 MB each. Your Supabase project may have a lower storage upload limit. Keep this tab open until uploads finish.</p></div>
            {!!uploadStatus.length&&<div className="admin-panel"><h2>Upload results</h2><ul className="upload-results">{uploadStatus.map((x,i)=><li key={i}><span>{x.name}</span><span>{x.status}</span></li>)}</ul></div>}
-           <div className="admin-panel"><h2>Master library — {cloudMedia.length} items</h2><p className="muted">Draft media is stored in Supabase, but it will not appear in the children's game until we add questions and publish it.</p><ul className="upload-results">{cloudMedia.map(x=><li key={x.id}><span>{x.title}</span><span>{x.is_published?'Published':'Draft'}</span></li>)}</ul></div></>}
+           <div className="admin-panel"><h2>Master library — {cloudMedia.length} items</h2><p className="muted">Draft media is stored in Supabase, but it will not appear in the children's game until we add questions and publish it.</p><ul className="upload-results">{cloudMedia.map(x=><li key={x.id}><button className="library-open" onClick={()=>openCloudEditor(x)}>{x.title} <span className="muted">— Edit lesson →</span></button><span>{x.is_published?'Published':'Draft'}</span></li>)}</ul></div></>}
          </>}
          {adminMessage&&<p role="status" className="hint">{adminMessage}</p>}
        </section>}
+      {page==='cloud-edit'&&selectedMedia&&<section className="parent lesson-editor">
+        <div className="heading-row"><div><h1>✏️ Lesson editor</h1><p className="muted">Review AI suggestions, save, then publish approved questions.</p></div><button onClick={()=>setPage('admin')}>← Back to admin</button></div>
+        <div className="admin-panel"><h2>{selectedMedia.title}</h2>
+          {mediaPreview?<Media item={{title:selectedMedia.title,type:selectedMedia.media_type}} src={mediaPreview}/>:<p>Loading private media preview…</p>}
+          <p className="muted">Status: {selectedMedia.is_published?'Published':'Private draft'}</p>
+          <div className="heading-row"><label>Language for questions <select value={lessonLanguage} onChange={e=>setLessonLanguage(e.target.value)}>{languages.map(([code,name])=><option key={code} value={code}>{name}</option>)}</select></label>
+          <button className="primary" disabled={lessonBusy} onClick={generateCloudQuestions}>✨ Generate 8 questions with AI</button></div>
+          <p className="muted">AI works with images after the secure Supabase Edge Function is installed. Videos need a later update. Review every suggestion.</p>
+        </div>
+        <div className="admin-panel"><div className="heading-row"><h2>Questions ({cloudQuestions.length})</h2><button disabled={lessonBusy} onClick={()=>setCloudQuestions(old=>[...old,blankCloudQuestion()])}>+ Add question</button></div>
+          {cloudQuestions.map((q,i)=><div className="question-editor" key={q.id}>
+            <div className="heading-row"><h3>Question {i+1} · {languages.find(x=>x[0]===q.language)?.[1]||q.language}</h3><label className="approve-toggle"><input type="checkbox" checked={!!q.is_published} onChange={e=>changeCloudQuestion(q.id,'is_published',e.target.checked)}/> Approved for learners</label></div>
+            <label>Question<input value={q.question_text} onChange={e=>changeCloudQuestion(q.id,'question_text',e.target.value)}/></label>
+            <label>Correct answer<input value={q.correct_answer} onChange={e=>changeCloudQuestion(q.id,'correct_answer',e.target.value)}/></label>
+            <label>Extra wrong words (comma-separated)<input value={Array.isArray(q.distractors)?q.distractors.join(', '):q.distractors} onChange={e=>changeCloudQuestion(q.id,'distractors',e.target.value)}/></label>
+            <div className="lesson-fields"><label>Grammar level<select value={q.tense} onChange={e=>changeCloudQuestion(q.id,'tense',e.target.value)}><option value="present_continuous">Present / current action</option><option value="past_continuous">Past continuous</option><option value="simple_past">Past</option><option value="future_will">Future</option><option value="future_going_to">Prediction</option></select></label>
+            <label>Question type<select value={q.category} onChange={e=>changeCloudQuestion(q.id,'category',e.target.value)}>{['who','what','where','which','why','yes_no','when','how'].map(c=><option key={c} value={c}>{c}</option>)}</select></label>
+            <label>Media display<select value={q.presentation_mode} onChange={e=>changeCloudQuestion(q.id,'presentation_mode',e.target.value)}><option value="visible">Keep visible</option><option value="hide_after_view">Hide after viewing</option><option value="pause_before_end">Pause before ending</option></select></label></div>
+            {q.id.startsWith('new-')&&<button className="danger" onClick={()=>setCloudQuestions(old=>old.filter(x=>x.id!==q.id))}>Remove suggestion</button>}
+          </div>)}
+          {lessonMessage&&<p role="status" className="hint">{lessonMessage}</p>}
+          <div className="actions"><button className="primary" disabled={lessonBusy} onClick={saveCloudQuestions}>{lessonBusy?'Working…':'Save questions'}</button><button disabled={lessonBusy} onClick={publishCloudLesson}>Publish approved lesson</button></div>
+        </div>
+      </section>}
 {page==='edit'&&draft&&<section className="parent editor"><div className="heading-row"><h1>{editing?'Edit media':'Add picture or video'}</h1><button onClick={()=>setPage('library')}>← Back</button></div><label>Title<input value={draft.title} placeholder="e.g. Brown dog running" onChange={e=>setDraft(d=>({...d,title:e.target.value}))}/></label><label>{editing?'Replace picture/video (optional)':'Picture or video'}<input type="file" accept="image/*,video/mp4,video/webm,video/quicktime" onChange={e=>{const f=e.target.files?.[0];setFile(f||null);setError('');}}/></label>{file&&<p className="muted">Selected: {file.name} ({(file.size/1024/1024).toFixed(1)} MB). Large videos may exceed browser storage limits.</p>}<div className="heading-row"><h2>Questions and answers</h2><button onClick={()=>setDraft(d=>({...d,questions:[...d.questions,newQuestion()]}))}>+ Add question</button></div>{draft.questions.map((q,i)=><div className="question-editor" key={q.id}><div className="heading-row"><h3>Question {i+1}</h3><button className="danger" onClick={()=>setDraft(d=>({...d,questions:d.questions.filter(x=>x.id!==q.id)}))}>Remove</button></div><label>Question<input value={q.question} placeholder="Who is running?" onChange={e=>updateQuestion(q.id,'question',e.target.value)}/></label><label>Correct answer<input value={q.answer} placeholder="The dog" onChange={e=>updateQuestion(q.id,'answer',e.target.value)}/></label><label>Extra wrong words (separate with commas)<input value={q.distractors} placeholder="cat, man, sleeping" onChange={e=>updateQuestion(q.id,'distractors',e.target.value)}/></label></div>)}{error&&<p className="error" role="alert">{error}</p>}<div className="actions"><button onClick={()=>setPage('library')}>Cancel</button><button className="primary" onClick={save}>Save to library</button></div></section>}
     </main><footer>Made with care for little learners 💛</footer>
   </div>;
