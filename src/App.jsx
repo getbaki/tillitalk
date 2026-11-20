@@ -348,19 +348,19 @@ return <div className="app">
     </div>
   )}
 
-  {page === 'play' && celebration === 'band' && (
-    <div className="animal-band" role="status" aria-label="Animal marching band celebration">
-      <div className="band-message">
-        🎉 Nine stars! Amazing work! 🎉
-      </div>
-      <div className="band-parade">
-        <span>🐘🥁</span>
-        <span>🦁🎺</span>
-        <span>🦒🥁</span>
-        <span>🐒🚩</span>
-      </div>
-    </div>
-  )}
+ 
+{page === 'play' && celebration === 'band' && (
+  <div className="animal-band" role="status" aria-label="Animal marching band celebration">
+    <video
+      className="animal-band-video"
+      src="/animal-band.mp4"
+      autoPlay
+      playsInline
+      preload="auto"
+    />
+  </div>
+)}
+
 
   
     <header className="topbar">
