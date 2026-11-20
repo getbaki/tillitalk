@@ -130,6 +130,10 @@ const languages = [
   const [picked,setPicked]=useState([]);
   const [checked,setChecked]=useState(false);
   const [wordOrder,setWordOrder]=useState([]);
+  
+  const [correctCount, setCorrectCount] = useState(0);
+  const [celebration, setCelebration] = useState('');
+
   const all=useMemo(()=>[...sample,...library,...publishedLessons], [library,publishedLessons]);
   useEffect(()=>{localStorage.setItem(LIBRARY_KEY,JSON.stringify(library));},[library]);
   useEffect(()=>{let active=true;const made=[];(async()=>{const map={};for(const item of library){try{const blob=await dbGet(item.id);if(blob){const url=URL.createObjectURL(blob);made.push(url);map[item.id]=url;}}catch{}}if(active)setUrls(map);else made.forEach(URL.revokeObjectURL);})();return()=>{active=false;made.forEach(URL.revokeObjectURL);};},[library]);
