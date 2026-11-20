@@ -7,3 +7,176 @@
 /* Lesson editor */
 .library-open{border:0;background:transparent;padding:5px 0;text-align:left;color:#23324b;font-weight:700}.library-open:hover{text-decoration:underline}.lesson-editor .lesson-media{max-height:360px}.lesson-editor label{display:block;font-weight:700;margin:12px 0}.lesson-editor input:not([type=checkbox]),.lesson-editor select{display:block;width:100%;padding:11px;border:1px solid #cbd3e6;border-radius:10px;margin-top:6px;background:white}.lesson-editor .approve-toggle{display:flex;align-items:center;gap:8px}.lesson-editor .approve-toggle input{width:auto}.lesson-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}.lesson-editor .question-editor{margin:18px 0}.lesson-editor .heading-row>label{min-width:200px}
 .language-picker{max-width:300px;margin:18px auto}.language-picker label{display:block;font-weight:700}.language-picker select{width:100%;margin-top:7px;border:1px solid #cbd3e6;border-radius:12px;padding:12px;background:white}
+
+/* TilliTalk mobile and tablet improvements */
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+button {
+  touch-action: manipulation;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 3px solid #7658dd;
+  outline-offset: 3px;
+}
+
+img,
+video {
+  max-width: 100%;
+}
+
+@media (max-width: 900px) {
+  main {
+    padding: 20px 16px 45px;
+  }
+
+  .library-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .play-area {
+    max-width: 100%;
+  }
+
+  .lesson-media {
+    height: min(42vh, 340px);
+  }
+
+  .admin-panel {
+    padding: 18px;
+  }
+}
+
+@media (max-width: 600px) {
+  .topbar {
+    padding: 12px 14px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .brand {
+    font-size: 23px;
+  }
+
+  .topbar nav {
+    width: 100%;
+    justify-content: center;
+    gap: 4px;
+  }
+
+  .topbar nav button {
+    font-size: 14px;
+    padding: 10px 12px;
+    min-height: 44px;
+  }
+
+  main {
+    padding: 16px 12px 35px;
+  }
+
+  .hero {
+    margin-top: 25px;
+  }
+
+  .hero-emoji {
+    font-size: 46px;
+  }
+
+  .hero p {
+    font-size: 18px;
+  }
+
+  .big {
+    width: 100%;
+    max-width: 350px;
+    font-size: 21px;
+    padding: 17px;
+  }
+
+  .library-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .lesson-media {
+    height: min(38vh, 260px);
+  }
+
+  .play-card {
+    padding: 12px;
+    border-radius: 18px;
+  }
+
+  .question-line h2 {
+    font-size: 23px;
+  }
+
+  .word {
+    font-size: 19px;
+    min-height: 52px;
+    padding: 12px 16px;
+  }
+
+  .word-bank {
+    gap: 9px;
+  }
+
+  .answer-zone {
+    min-height: 85px;
+  }
+
+  .actions {
+    justify-content: stretch;
+  }
+
+  .actions button {
+    flex: 1;
+    min-height: 50px;
+  }
+
+  .actions .primary {
+    margin-left: 0;
+  }
+
+  .admin-panel {
+    padding: 14px;
+  }
+
+  .upload-dropzone {
+    padding: 20px 12px;
+  }
+
+  .lesson-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .heading-row > button {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 380px) {
+  .topbar nav button {
+    font-size: 12px;
+    padding: 9px;
+  }
+
+  .word {
+    font-size: 17px;
+    padding: 10px 12px;
+  }
+}
