@@ -189,3 +189,98 @@ video {
     padding: 10px 12px;
   }
 }
+
+/* TilliTalk fox branding — November 2026 */
+
+:root {
+  font-family: 'Nunito', sans-serif;
+  color: #17345B;
+  background: #FFF8ED;
+}
+
+body {
+  font-family: 'Nunito', sans-serif;
+  background: #FFF8ED;
+  color: #17345B;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: 'Nunito', sans-serif;
+}
+
+button {
+  color: #17345B;
+  border-color: #D7E5E2;
+}
+
+button:hover {
+  background: #E9F5F2;
+}
+
+.topbar {
+  background: #FFFFFF;
+  border-bottom-color: #D7E5E2;
+}
+
+.brand {
+  padding: 0;
+  background: transparent;
+  border: 0;
+}
+
+.brand:hover {
+  background: transparent;
+}
+
+.primary,
+.upload-choose-button {
+  background: #128D88;
+  border-color: #128D88;
+  color: white;
+}
+
+.primary:hover {
+  background: #0E706C;
+}
+
+.upload-dropzone {
+  background: #F0FAF7;
+  border-color: #80C5B8;
+}
+
+.upload-dropzone.is-dragging {
+  background: #DDF3ED;
+  border-color: #128D88;
+}
+
+.word.selected {
+  background: #DDF3ED;
+}
+
+.word {
+  box-shadow: 0 3px 0 #C7DDD8;
+}
+
+.hint {
+  background: #E8F5F2;
+}
+
+.progress-track div {
+  background: #128D88;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline-color: #F2A65A;
+}
+
+@media (max-width: 600px) {
+  .brand img {
+    max-height: 48px;
+  }
+}
+
