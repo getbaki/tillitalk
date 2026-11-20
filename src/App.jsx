@@ -1,3 +1,163 @@
+import { supabase } from './supabase';
+import { useEffect, useMemo, useState } from 'react';
+
+const DB_NAME = 'tillitalk-media-v2';
+const STORE = 'media';
+const LIBRARY_KEY = 'tillitalk-library-v2';
+const sample = [
+  {id:'sample-dog',title:'A dog running',type:'image',url:'https://images.unsplash.com/photo-1558788353-f76d92427f16?auto=format&fit=crop&w=1200&q=85',questions:[
+    {id:'d1',question:'Who is running?',answer:'The dog',distractors:'cat, man, car'},
+    {id:'d2',question:'What is the dog doing?',answer:'The dog is running',distractors:'sleeping, eating, cat'},
+    {id:'d3',question:'Is it a cat?',answer:'No it is a dog',distractors:'yes, cat, sleeping'}
+  ]},
+  {id:'sample-car',title:'Washing a car (sample questions)',type:'image',url:'',questions:[
+    {id:'c1',question:'Who is washing the car?',answer:'A man',distractors:'woman, dog, boy'},
+    {id:'c2',question:'What is he doing?',answer:'He is washing the car',distractors:'running, eating, dog'}
+  ]}
+];
+function id(){return crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`;}
+function loadLibrary(){try{const x=JSON.parse(localStorage.getItem(LIBRARY_KEY));return Array.isArray(x)?x:[];}catch{return [];}}
+function openDb(){return new Promise((resolve,reject)=>{const req=indexedDB.open(DB_NAME,1);req.onupgradeneeded=()=>req.result.createObjectStore(STORE);req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);});}
+async function dbPut(key,file){const db=await openDb();return new Promise((resolve,reject)=>{const tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).put(file,key);tx.oncomplete=()=>{db.close();resolve();};tx.onerror=()=>{db.close();reject(tx.error);};});}
+async function dbGet(key){const db=await openDb();return new Promise((resolve,reject)=>{const tx=db.transaction(STORE);const req=tx.objectStore(STORE).get(key);req.onsuccess=()=>{db.close();resolve(req.result);};req.onerror=()=>{db.close();reject(req.error);};});}
+async function dbDelete(key){const db=await openDb();return new Promise((resolve,reject)=>{const tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).delete(key);tx.oncomplete=()=>{db.close();resolve();};tx.onerror=()=>{db.close();reject(tx.error);};});}
+function shuffle(arr){const a=[...arr];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function say(text){if(!('speechSynthesis'in window))return;window.speechSynthesis.cancel();const s=new SpeechSynthesisUtterance(text);s.lang='en-GB';s.rate=.82;window.speechSynthesis.speak(s);}
+function newQuestion(){return {id:id(),question:'',answer:'',distractors:''};}
+function makePlan(items){const queues=shuffle(items.filter(x=>x.questions?.some(q=>q.question.trim()&&q.answer.trim()))).map(item=>({item,questions:shuffle(item.questions.filter(q=>q.question.trim()&&q.answer.trim()))}));const plan=[];while(queues.some(x=>x.questions.length)){for(const q of queues){const count=Math.min(q.questions.length,Math.random()<.5?1:2);for(let i=0;i<count;i++)plan.push({mediaId:q.item.id,question:q.questions.shift()});}}return plan;}
+function Media({item,src}){if(!src)return <div className="media-placeholder">🖼️ Add a picture or video</div>;return item.type==='video'?<video key={src} src={src} controls playsInline preload="metadata" className="lesson-media"/>:<img className="lesson-media" src={src} alt={item.title}/>;}
+export default function App(){
+  const [library,setLibrary]=useState(loadLibrary);
+  const [session,setSession]=useState(null);
+  const [adminAllowed,setAdminAllowed]=useState(false);
+  const [adminChecking,setAdminChecking]=useState(true);
+  const [email,setEmail]=useState('');
+  const [password,setPassword]=useState('');
+  const [adminMessage,setAdminMessage]=useState('');
+  const [cloudMedia,setCloudMedia]=useState([]);
+  const [uploadFiles,setUploadFiles]=useState([]);
+  const [uploadStatus,setUploadStatus]=useState([]);
+  const [uploading,setUploading]=useState(false);
+  const [dragActive,setDragActive]=useState(false);
+  const [selectedMedia,setSelectedMedia]=useState(null);
+  const [mediaPreview,setMediaPreview]=useState('');
+  const [cloudQuestions,setCloudQuestions]=useState([]);
+  const [lessonLanguage,setLessonLanguage]=useState('en');
+  const [learnerLanguage,setLearnerLanguage]=useState('en');
+  const [lessonMode,setLessonMode]=useState('helper');
+  const [helperLanguage,setHelperLanguage]=useState('en');
+  const [lessonBusy,setLessonBusy]=useState(false);
+  const [lessonMessage,setLessonMessage]=useState('');
+  const [publishedLessons,setPublishedLessons]=useState([]);
+  const [publicLoading,setPublicLoading]=useState(false);
+  const [publicError,setPublicError]=useState('');
+  const languages=[['en','English'],['nl','Dutch'],['fr','French'],['sw','Swahili'],['zh','Mandarin Chinese'],['es','Spanish'],['de','German'],['ar','Arabic']];
+  const [urls,setUrls]=useState({});
+  const [page,setPage]=useState('home');
+  const [editing,setEditing]=useState(null);
+  const [draft,setDraft]=useState(null);
+  const [file,setFile]=useState(null);
+  const [error,setError]=useState('');
+  const [plan,setPlan]=useState([]);
+  const [step,setStep]=useState(0);
+  const [picked,setPicked]=useState([]);
+  const [checked,setChecked]=useState(false);
+  const [wordOrder,setWordOrder]=useState([]);
+  const all=useMemo(()=>[...sample,...library,...publishedLessons], [library,publishedLessons]);
+  useEffect(()=>{localStorage.setItem(LIBRARY_KEY,JSON.stringify(library));},[library]);
+  useEffect(()=>{let active=true;const made=[];(async()=>{const map={};for(const item of library){try{const blob=await dbGet(item.id);if(blob){const url=URL.createObjectURL(blob);made.push(url);map[item.id]=url;}}catch{}}if(active)setUrls(map);else made.forEach(URL.revokeObjectURL);})();return()=>{active=false;made.forEach(URL.revokeObjectURL);};},[library]);
+  useEffect(()=>{
+    let mounted=true;
+    async function applySession(nextSession){
+      if(!mounted)return;
+      setSession(nextSession);
+      setAdminAllowed(false);
+      setAdminChecking(!!nextSession);
+      if(!nextSession){setCloudMedia([]);return;}
+      const {data,error}=await supabase.from('app_admins').select('user_id').eq('user_id',nextSession.user.id).maybeSingle();
+      if(!mounted)return;
+      setAdminAllowed(!error && !!data);
+      setAdminChecking(false);
+      if(error)setAdminMessage('Could not check administrator access: '+error.message);
+    }
+    supabase.auth.getSession().then(({data})=>applySession(data.session));
+    const {data:{subscription}}=supabase.auth.onAuthStateChange((_event,nextSession)=>{
+      // Defer Supabase queries until after the auth event callback returns.
+      setTimeout(()=>applySession(nextSession),0);
+    });
+    return()=>{mounted=false;subscription.unsubscribe();};
+  },[]);
+  useEffect(()=>{
+    if(!adminAllowed)return;
+    let cancelled=false;
+    supabase.from('media').select('id,title,media_type,storage_path,is_published,created_at')
+      .order('created_at',{ascending:false}).then(({data,error})=>{
+        if(cancelled)return;
+        if(error)setAdminMessage('Could not load library: '+error.message);
+        else setCloudMedia(data||[]);
+      });
+    return()=>{cancelled=true;};
+  },[adminAllowed]);
+  async function openCloudEditor(item){
+    setSelectedMedia(item);setCloudQuestions([]);setMediaPreview('');setLessonMessage('Loading lesson…');setPage('cloud-edit');
+    const [{data:questions,error:questionError},{data:preview,error:previewError}]=await Promise.all([
+      supabase.from('questions').select('id,question_text,correct_answer,distractors,tense,category,presentation_mode,is_published,language').eq('media_id',item.id).order('created_at'),
+      supabase.storage.from('lesson-media').createSignedUrl(item.storage_path,3600)
+    ]);
+    if(questionError)setLessonMessage('Cannot load questions: '+questionError.message);
+    else {setCloudQuestions(questions||[]);setLessonMessage('');}
+    if(previewError)setLessonMessage('Cannot preview media: '+previewError.message);
+    else setMediaPreview(preview?.signedUrl||'');
+  }
+  function blankCloudQuestion(){return {id:'new-'+id(),question_text:'',correct_answer:'',distractors:[],tense:'present_continuous',category:'what',presentation_mode:'visible',is_published:false,language:lessonLanguage};}
+  function changeCloudQuestion(qid,field,value){setCloudQuestions(old=>old.map(q=>q.id===qid?{...q,[field]:value}:q));}
+  async function saveCloudQuestions(){
+    if(!selectedMedia||lessonBusy)return;
+    if(cloudQuestions.some(q=>!q.question_text.trim()||!q.correct_answer.trim())){setLessonMessage('Please fill in every question and answer, or remove empty questions.');return;}
+    setLessonBusy(true);setLessonMessage('Saving questions…');
+    try{
+      const existing=cloudQuestions.filter(q=>!q.id.startsWith('new-'));
+      const added=cloudQuestions.filter(q=>q.id.startsWith('new-'));
+      const toRecord=q=>({media_id:selectedMedia.id,question_text:q.question_text.trim(),correct_answer:q.correct_answer.trim(),distractors:Array.isArray(q.distractors)?q.distractors:q.distractors.split(',').map(x=>x.trim()).filter(Boolean),tense:q.tense,category:q.category,presentation_mode:q.presentation_mode,language:q.language,is_published:!!q.is_published});
+      for(const q of existing){const {error}=await supabase.from('questions').update(toRecord(q)).eq('id',q.id);if(error)throw error;}
+      if(added.length){const {error}=await supabase.from('questions').insert(added.map(toRecord));if(error)throw error;}
+      const {data,error}=await supabase.from('questions').select('id,question_text,correct_answer,distractors,tense,category,presentation_mode,is_published,language').eq('media_id',selectedMedia.id).order('created_at');
+      if(error)throw error;setCloudQuestions(data||[]);setLessonMessage('Questions saved.');
+    }catch(e){setLessonMessage('Could not save: '+e.message);}finally{setLessonBusy(false);}
+  }
+  async function generateCloudQuestions(){
+    if(!selectedMedia||lessonBusy)return;
+    if(selectedMedia.media_type==='video'){setLessonMessage('AI analysis of videos is not available yet. You can still add questions manually.');return;}
+    setLessonBusy(true);setLessonMessage('AI is examining the picture. This may take a moment…');
+    try{
+      const {data,error}=await supabase.functions.invoke('generate-questions',{body:{media_id:selectedMedia.id,language:lessonLanguage}});
+      if(error)throw new Error(data?.error||error.message);
+      if(data?.error)throw new Error(data.error);
+      if(!Array.isArray(data?.questions)||!data.questions.length)throw new Error('No questions returned.');
+      const suggestions=data.questions.map(q=>({...blankCloudQuestion(),question_text:q.question_text||'',correct_answer:q.correct_answer||'',distractors:Array.isArray(q.distractors)?q.distractors:[],tense:q.tense||'present_continuous',category:q.category||'what',presentation_mode:q.presentation_mode||'visible',language:lessonLanguage}));
+      setCloudQuestions(old=>[...old,...suggestions]);setLessonMessage(`${suggestions.length} AI suggestions added. Review and save them before publishing.`);
+    }catch(e){setLessonMessage('AI generation unavailable: '+e.message+' Check the Edge Function setup instructions.');}
+    finally{setLessonBusy(false);}
+  }
+  async function publishCloudLesson(){
+    if(!selectedMedia||lessonBusy)return;
+    if(cloudQuestions.some(q=>q.id.startsWith('new-'))){setLessonMessage('Save your questions before publishing.');return;}
+    const approved=cloudQuestions.filter(q=>q.is_published);
+    if(!approved.length){setLessonMessage('Tick at least one approved question before publishing.');return;}
+    setLessonBusy(true);
+    const {error}=await supabase.from('media').update({is_published:true}).eq('id',selectedMedia.id);
+    if(error)setLessonMessage('Could not publish: '+error.message);
+    else{setSelectedMedia(m=>({...m,is_published:true}));setCloudMedia(old=>old.map(m=>m.id===selectedMedia.id?{...m,is_published:true}:m));setLessonMessage('Lesson published! Approved questions can now be used by learners.');}
+    setLessonBusy(false);
+  }
+  async function loadPublishedLessons(){
+    setPublicLoading(true);
+    setPublicError('');
+    const {data:media,error:mediaError}=await supabase.from('media').select('id,title,media_type,storage_path').eq('is_published',true);
+    if(mediaError){setPublicError('Could not load published lessons: '+mediaError.message);setPublicLoading(false);return [];}
+    const {data:questions,error:questionError}=await supabase.from('questions').select('id,media_id,question_text,correct_answer,distractors,language').eq('is_published',true);
+    if(questionError){setPublicError('Could not load published questions: '+questionError.message);setPublicLoading(false);return [];}
+    let missingMediaAccess=false;
     const withUrls=await Promise.all((media||[]).map(async m=>{
       // Public media is served only after the server confirms that it is published.
       try{const url=new URL(import.meta.env.VITE_SUPABASE_URL+'/functions/v1/published-media');url.searchParams.set('media_id',m.id);
