@@ -48,3 +48,40 @@ body { margin:0; color:var(--tt-ink); background:linear-gradient(155deg,#e7f9ff 
  .app .question-line { flex-wrap:wrap; }
 }
 @media (prefers-reduced-motion:reduce) { .app button { transition:none; } }
+
+/* The ninth-answer celebration crosses the existing learning screen.
+   No dark backdrop, video rectangle, or touch-blocking overlay. */
+.app .tilli-parade {
+  position:fixed; left:0; right:0; bottom:clamp(74px, 13vh, 140px);
+  height:105px; z-index:9999; overflow:hidden; pointer-events:none;
+  background:transparent; contain:layout paint;
+}
+.app .tilli-parade-march {
+  position:absolute; top:4px; left:0; width:max-content;
+  display:flex; align-items:flex-end; gap:clamp(8px, 2vw, 22px);
+  animation:tilli-parade-cross 6.6s linear both;
+}
+.app .tilli-parade-animal {
+  position:relative; display:inline-flex; align-items:center;
+  font-size:clamp(43px, 9vw, 72px); line-height:1.2;
+  filter:drop-shadow(0 3px 2px rgba(0,0,0,.12));
+  animation:tilli-parade-step .42s ease-in-out infinite alternate;
+}
+.app .tilli-parade-animal small {
+  font-size:.45em; margin-left:-.25em; align-self:flex-end;
+}
+@keyframes tilli-parade-cross {
+  from {transform:translateX(calc(100vw + 12px));}
+  to {transform:translateX(-110%);}
+}
+@keyframes tilli-parade-step {
+  from {transform:translateY(0) rotate(-4deg);}
+  to {transform:translateY(-10px) rotate(4deg);}
+}
+@media (max-width:600px) {
+  .app .tilli-parade {height:84px; bottom:100px;}
+  .app .tilli-parade-animal {font-size:48px;}
+}
+@media (prefers-reduced-motion:reduce) {
+  .app .tilli-parade-animal {animation:none;}
+}

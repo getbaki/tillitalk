@@ -422,17 +422,14 @@ return <div className="app">
 
  
 {page === 'play' && celebration === 'band' && (
-  <div className="animal-band" role="status" aria-label="Animal marching band celebration"
-    style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.78)', padding: '12px' }}>
-    <video
-      className="animal-band-video"
-      src="/animal-band.mp4"
-      autoPlay
-      muted
-      playsInline
-      preload="auto"
-      style={{ display: 'block', width: '100%', maxWidth: '900px', maxHeight: '90vh', objectFit: 'contain', borderRadius: '18px' }}
-    />
+  <div className="tilli-parade" role="status" aria-label="Hooray! The animal marching band is passing by!">
+    <div className="tilli-parade-march" aria-hidden="true">
+      <span className="tilli-parade-animal" style={{animationDelay:'0s'}}>🐘<small>🥁</small></span>
+      <span className="tilli-parade-animal" style={{animationDelay:'.13s'}}>🦁<small>🎺</small></span>
+      <span className="tilli-parade-animal" style={{animationDelay:'.26s'}}>🦒<small>🥁</small></span>
+      <span className="tilli-parade-animal" style={{animationDelay:'.39s'}}>🐒<small>🚩</small></span>
+      <span className="tilli-parade-animal" style={{animationDelay:'.52s'}}>🐻<small>🎶</small></span>
+    </div>
   </div>
 )}
 
