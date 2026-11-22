@@ -47,7 +47,22 @@ function say(text, language = 'en', volume = 1) {
 
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = speechLanguages[language] || 'en-GB';
-  utterance.rate = 0.85;
+  // A gentle, clear pace for early language learners.
+  utterance.rate = 0.72;
+  utterance.pitch = 1.08;
+
+  // Voice names vary by Android device and browser. Prefer a natural-sounding
+  // female voice in the selected language, falling back to any matching voice.
+  const voices = window.speechSynthesis.getVoices();
+  const target = utterance.lang.toLowerCase();
+  const base = target.split('-')[0];
+  const candidates = voices.filter(v => v.lang.toLowerCase().split('-')[0] === base);
+  const femaleHints = /female|woman|samantha|victoria|karen|moira|tessa|zira|aria|jenny|susan|ava|serena|sonia|natasha|google uk english female/i;
+  const preferred = candidates.find(v => femaleHints.test(v.name) && v.lang.toLowerCase() === target)
+    || candidates.find(v => femaleHints.test(v.name))
+    || candidates.find(v => v.lang.toLowerCase() === target)
+    || candidates[0];
+  if (preferred) utterance.voice = preferred;
   utterance.volume = Math.max(0, Math.min(1, volume));
 
   window.speechSynthesis.speak(utterance);
