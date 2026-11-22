@@ -1,0 +1,50 @@
+/* TilliTalk cheerful theme: safe visual overrides for existing responsive layout. */
+:root { --tt-ink:#25305b; --tt-purple:#7654e8; --tt-pink:#ff6eae; --tt-yellow:#ffcc4d; --tt-blue:#52b9f7; --tt-green:#45cda0; }
+*, *::before, *::after { box-sizing:border-box; }
+html { -webkit-text-size-adjust:100%; }
+body { margin:0; color:var(--tt-ink); background:linear-gradient(155deg,#e7f9ff 0%,#fdf1ff 48%,#fff8d9 100%); }
+.app { min-height:100vh; background:radial-gradient(circle at 8% 17%,#ffddf1 0 85px,transparent 86px),radial-gradient(circle at 92% 32%,#dcf5ff 0 105px,transparent 106px),linear-gradient(155deg,#e7f9ff,#fdf1ff 55%,#fff8d9); color:var(--tt-ink); }
+.app .topbar { background:rgba(255,255,255,.92); border-bottom:4px solid #ffe37b; box-shadow:0 5px 18px rgba(84,83,163,.10); }
+.app .topbar nav { display:flex; flex-wrap:wrap; gap:7px; }
+.app .topbar nav button { background:#eef2ff; color:#49379b; border:2px solid #dcd6ff; border-radius:999px; font-weight:800; padding:10px 13px; }
+.app .topbar nav button:hover { background:#e5ddff; }
+.app .hero { background:rgba(255,255,255,.89); border:3px solid #f8d5fb; border-radius:30px; box-shadow:0 14px 32px rgba(113,91,164,.13); }
+.app .hero h1 { color:#6744c9; font-weight:900; letter-spacing:-.035em; }
+.app .hero-emoji { font-size:clamp(2.4rem,8vw,4.8rem); filter:drop-shadow(0 5px 2px rgba(113,91,164,.10)); }
+.app button { touch-action:manipulation; transition:transform .13s ease,box-shadow .13s ease,background-color .13s ease; }
+.app button:not(:disabled):active { transform:scale(.97); }
+.app button.primary, .app .primary { background:linear-gradient(110deg,#7955ed,#ee67ac); color:white; border:0; border-radius:18px; font-weight:900; box-shadow:0 6px 0 #d6b3ee,0 10px 20px rgba(111,81,187,.16); }
+.app button.primary:hover { filter:brightness(1.05); }
+.app button.primary:disabled { opacity:.55; box-shadow:none; }
+.app .play-card { background:#fff; border:3px solid #e2d8ff; border-radius:26px; box-shadow:0 12px 30px rgba(97,84,160,.12); overflow:hidden; }
+.app .lesson-media { border-radius:20px; max-width:100%; }
+.app .question-line h2 { color:#5538a3; font-weight:900; }
+.app .question-line .sound { background:#e5f7ff; border:2px solid #8cd8ff; border-radius:15px; min-width:44px; min-height:44px; }
+.app .progress { color:#6246ae; font-weight:800; }
+.app .progress-track { background:#e8e4fa; border-radius:999px; overflow:hidden; min-height:12px; }
+.app .progress-track > div { background:linear-gradient(90deg,#56c9f4,#54d9a7,#ffe06b,#ff83b6,#9776ff); border-radius:999px; min-height:12px; }
+.app .answer-zone { background:#f2fbff; border:3px dashed #9bd8f7; border-radius:19px; min-height:68px; padding:12px; }
+.app .word-bank { display:flex; flex-wrap:wrap; gap:9px; }
+.app .word-bank .word { background:#ffebad; color:#3f3263; border:2px solid #f3c957; border-radius:14px; padding:11px 15px; min-height:46px; font-size:clamp(1rem,2.5vw,1.2rem); font-weight:850; box-shadow:0 4px 0 #e6cb80; }
+.app .word-bank .word:nth-child(4n + 2) { background:#d7f6ff; border-color:#8adbf5; box-shadow:0 4px 0 #a4dce9; }
+.app .word-bank .word:nth-child(4n + 3) { background:#f9dcf2; border-color:#efa5d7; box-shadow:0 4px 0 #e7b9d9; }
+.app .word-bank .word:nth-child(4n + 4) { background:#d9f7d9; border-color:#8ad8a1; box-shadow:0 4px 0 #a5dcb4; }
+.app .answer-zone .word.selected { background:#d9f9e6; border:2px solid #65c997; color:#24513c; border-radius:13px; font-weight:850; min-height:44px; }
+.app .feedback.good { background:#e1fbe7; color:#216844; border:2px solid #9ce0ae; border-radius:16px; font-weight:850; }
+.app .feedback.try { background:#fff2dc; color:#82531d; border:2px solid #f6d58b; border-radius:16px; font-weight:750; }
+.app .admin-panel, .app .media-card, .app .question-editor { background:#fff; border:2px solid #e8dfff; border-radius:19px; box-shadow:0 6px 18px rgba(106,85,154,.07); }
+.app .media-card { overflow:hidden; }
+.app .hint { background:#f3edff; border-radius:15px; padding:12px; color:#5c469d; }
+.app input, .app select, .app textarea { max-width:100%; }
+.app input:focus-visible, .app select:focus-visible, .app button:focus-visible { outline:3px solid #f8ad46; outline-offset:3px; }
+.app footer { color:#6b57a2; }
+@media (max-width:600px) {
+ .app .topbar { gap:8px; }
+ .app .topbar .brand img { max-height:53px; }
+ .app .topbar nav button { padding:8px 10px; font-size:.88rem; }
+ .app .hero { border-radius:22px; }
+ .app .play-card { border-radius:19px; }
+ .app .word-bank .word { padding:10px 12px; min-height:46px; }
+ .app .question-line { flex-wrap:wrap; }
+}
+@media (prefers-reduced-motion:reduce) { .app button { transition:none; } }

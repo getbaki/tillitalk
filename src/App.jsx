@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import './TilliTalkFun.css';
 import { useEffect, useMemo, useState } from 'react';
 
 const DB_NAME = 'tillitalk-media-v2';
