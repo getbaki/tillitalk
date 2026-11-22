@@ -223,6 +223,45 @@ useEffect(() => {
       if(error)throw error;setCloudQuestions(data||[]);setLessonMessage('Questions saved.');
     }catch(e){setLessonMessage('Could not save: '+e.message);}finally{setLessonBusy(false);}
   }
+  async function deleteCloudQuestion(question){
+    if(lessonBusy || !selectedMedia) return;
+    if(!window.confirm(`Delete this question permanently?\n\n${question.question_text || '(New question)'}`)) return;
+    if(question.id.startsWith('new-')){
+      setCloudQuestions(old=>old.filter(q=>q.id!==question.id));
+      setLessonMessage('Unsaved question removed.');
+      return;
+    }
+    setLessonBusy(true);
+    setLessonMessage('Deleting question…');
+    try{
+      const {data,error}=await supabase.from('questions').delete().eq('id',question.id).eq('media_id',selectedMedia.id).select('id');
+      if(error)throw error;
+      if(!data?.length)throw new Error('The question was not deleted. Check administrator permissions.');
+      setCloudQuestions(old=>old.filter(q=>q.id!==question.id));
+      setLessonMessage('Question deleted permanently.');
+    }catch(e){setLessonMessage('Could not delete question: '+(e.message||String(e)));}
+    finally{setLessonBusy(false);}
+  }
+  async function deleteCloudMedia(item){
+    if(lessonBusy || uploading) return;
+    if(!window.confirm(`Permanently delete “${item.title}” and ALL its questions? This cannot be undone.`))return;
+    setLessonBusy(true);
+    setAdminMessage('Deleting picture/video and its questions…');
+    try{
+      // Delete the database records before removing the stored file.
+      const {error:questionError}=await supabase.from('questions').delete().eq('media_id',item.id);
+      if(questionError)throw questionError;
+      const {data:deleted,error:mediaError}=await supabase.from('media').delete().eq('id',item.id).select('id');
+      if(mediaError)throw mediaError;
+      if(!deleted?.length)throw new Error('The picture was not deleted. Check administrator permissions.');
+      setCloudMedia(old=>old.filter(m=>m.id!==item.id));
+      setPublishedLessons(old=>old.filter(m=>m.id!==item.id));
+      if(selectedMedia?.id===item.id){setSelectedMedia(null);setCloudQuestions([]);setPage('admin');}
+      const {error:storageError}=await supabase.storage.from('lesson-media').remove([item.storage_path]);
+      setAdminMessage(storageError ? 'Picture and questions deleted from the library, but the stored file could not be removed: '+storageError.message : 'Picture/video and its questions deleted permanently.');
+    }catch(e){setAdminMessage('Could not finish deletion: '+(e.message||String(e))+'. Some questions may already have been deleted.');}
+    finally{setLessonBusy(false);}
+  }
   async function generateCloudQuestions(){
     if(!selectedMedia||lessonBusy)return;
     if(selectedMedia.media_type==='video'){setLessonMessage('AI analysis of videos is not available yet. You can still add questions manually.');return;}
@@ -506,7 +545,7 @@ return <div className="app">
              <label className="upload-choose-button">Choose files<input type="file" accept="image/*,video/*,.mov,.m4v" multiple disabled={uploading} onChange={e=>{selectUploadFiles(e.target.files);e.target.value='';}}/></label>
            </div><p>{uploadFiles.length} files selected {uploadFiles.length>0&&<button type="button" disabled={uploading} onClick={()=>{setUploadFiles([]);setUploadStatus([]);}}>Clear selection</button>}</p><button className="primary" disabled={!uploadFiles.length||uploading} onClick={uploadAll}>{uploading?'Uploading…':`Upload ${uploadFiles.length} files`}</button><p className="muted">Upload files up to 50 MB each. Your Supabase project may have a lower storage upload limit. Keep this tab open until uploads finish.</p></div>
            {!!uploadStatus.length&&<div className="admin-panel"><h2>Upload results</h2><ul className="upload-results">{uploadStatus.map((x,i)=><li key={i}><span>{x.name}</span><span>{x.status}</span></li>)}</ul></div>}
-           <div className="admin-panel"><h2>Master library — {cloudMedia.length} items</h2><p className="muted">Draft media is stored in Supabase, but it will not appear in the children's game until we add questions and publish it.</p><ul className="upload-results">{cloudMedia.map(x=><li key={x.id}><button className="library-open" onClick={()=>openCloudEditor(x)}>{x.title} <span className="muted">— Edit lesson →</span></button><span>{x.is_published?'Published':'Draft'}</span></li>)}</ul></div></>}
+           <div className="admin-panel"><h2>Master library — {cloudMedia.length} items</h2><p className="muted">Draft media is stored in Supabase, but it will not appear in the children's game until we add questions and publish it.</p><ul className="upload-results">{cloudMedia.map(x=><li key={x.id}><button className="library-open" onClick={()=>openCloudEditor(x)}>{x.title} <span className="muted">— Edit lesson →</span></button><span>{x.is_published?'Published':'Draft'}</span><button type="button" className="danger" disabled={lessonBusy||uploading} onClick={()=>deleteCloudMedia(x)} aria-label={`Delete ${x.title} and all its questions`}>🗑 Delete</button></li>)}</ul></div></>}
          </>}
          {adminMessage&&<p role="status" className="hint">{adminMessage}</p>}
        </section>}
@@ -528,7 +567,7 @@ return <div className="app">
             <div className="lesson-fields"><label>Grammar level<select value={q.tense} onChange={e=>changeCloudQuestion(q.id,'tense',e.target.value)}><option value="present_continuous">Present / current action</option><option value="past_continuous">Past continuous</option><option value="simple_past">Past</option><option value="future_will">Future</option><option value="future_going_to">Prediction</option></select></label>
             <label>Question type<select value={q.category} onChange={e=>changeCloudQuestion(q.id,'category',e.target.value)}>{['who','what','where','which','why','yes_no','when','how'].map(c=><option key={c} value={c}>{c}</option>)}</select></label>
             <label>Media display<select value={q.presentation_mode} onChange={e=>changeCloudQuestion(q.id,'presentation_mode',e.target.value)}><option value="visible">Keep visible</option><option value="hide_after_view">Hide after viewing</option><option value="pause_before_end">Pause before ending</option></select></label></div>
-            {q.id.startsWith('new-')&&<button className="danger" onClick={()=>setCloudQuestions(old=>old.filter(x=>x.id!==q.id))}>Remove suggestion</button>}
+            <button type="button" className="danger" disabled={lessonBusy} onClick={()=>deleteCloudQuestion(q)}>🗑 Delete question</button>
           </div>)}
           {lessonMessage&&<p role="status" className="hint">{lessonMessage}</p>}
           <div className="actions"><button className="primary" disabled={lessonBusy} onClick={saveCloudQuestions}>{lessonBusy?'Working…':'Save questions'}</button><button disabled={lessonBusy} onClick={publishCloudLesson}>Publish approved lesson</button></div>
