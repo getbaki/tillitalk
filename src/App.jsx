@@ -5,17 +5,8 @@ import { useEffect, useMemo, useState } from 'react';
 const DB_NAME = 'tillitalk-media-v2';
 const STORE = 'media';
 const LIBRARY_KEY = 'tillitalk-library-v2';
-const sample = [
-  {id:'sample-dog',title:'A dog running',type:'image',url:'https://images.unsplash.com/photo-1558788353-f76d92427f16?auto=format&fit=crop&w=1200&q=85',questions:[
-    {id:'d1',question:'Who is running?',answer:'The dog',distractors:'cat, man, car'},
-    {id:'d2',question:'What is the dog doing?',answer:'The dog is running',distractors:'sleeping, eating, cat'},
-    {id:'d3',question:'Is it a cat?',answer:'No it is a dog',distractors:'yes, cat, sleeping'}
-  ]},
-  {id:'sample-car',title:'Washing a car (sample questions)',type:'image',url:'',questions:[
-    {id:'c1',question:'Who is washing the car?',answer:'A man',distractors:'woman, dog, boy'},
-    {id:'c2',question:'What is he doing?',answer:'He is washing the car',distractors:'running, eating, dog'}
-  ]}
-];
+const sample = []; // Built-in demo lessons removed; only your lessons appear.
+
 function id(){return crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`;}
 function loadLibrary(){try{const x=JSON.parse(localStorage.getItem(LIBRARY_KEY));return Array.isArray(x)?x:[];}catch{return [];}}
 function openDb(){return new Promise((resolve,reject)=>{const req=indexedDB.open(DB_NAME,1);req.onupgradeneeded=()=>req.result.createObjectStore(STORE);req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);});}
@@ -103,6 +94,10 @@ export default function App(){
   const [password,setPassword]=useState('');
   const [adminMessage,setAdminMessage]=useState('');
   const [cloudMedia,setCloudMedia]=useState([]);
+  const [cloudCounts,setCloudCounts]=useState({});
+  const [cloudPreviews,setCloudPreviews]=useState({});
+  const [selectedForDelete,setSelectedForDelete]=useState([]);
+  const [librarySearch,setLibrarySearch]=useState('');
   const [uploadFiles,setUploadFiles]=useState([]);
   const [uploadStatus,setUploadStatus]=useState([]);
   const [uploading,setUploading]=useState(false);
@@ -212,6 +207,57 @@ useEffect(() => {
       });
     return()=>{cancelled=true;};
   },[adminAllowed]);
+  useEffect(()=>{
+    if(!adminAllowed || !cloudMedia.length){setCloudCounts({});setCloudPreviews({});return;}
+    let cancelled=false;
+    (async()=>{
+      const ids=cloudMedia.map(m=>m.id);
+      // Query only media_id; no sensitive question content is needed for counts.
+      const {data,error}=await supabase.from('questions').select('media_id').in('media_id',ids);
+      if(!cancelled && !error){
+        const counts={}; for(const q of data||[])counts[q.media_id]=(counts[q.media_id]||0)+1;
+        setCloudCounts(counts);
+      }
+      // Signed thumbnails are private and expire after one hour.
+      const previews={};
+      for(let i=0;i<cloudMedia.length;i+=15){
+        const batch=cloudMedia.slice(i,i+15);
+        await Promise.all(batch.map(async m=>{
+          const {data}=await supabase.storage.from('lesson-media').createSignedUrl(m.storage_path,3600);
+          if(data?.signedUrl)previews[m.id]=data.signedUrl;
+        }));
+        if(cancelled)return;
+        setCloudPreviews({...previews});
+      }
+    })();
+    return()=>{cancelled=true;};
+  },[adminAllowed,cloudMedia]);
+
+  async function deleteSelectedCloudMedia(){
+    if(lessonBusy||uploading||!selectedForDelete.length)return;
+    const targets=cloudMedia.filter(m=>selectedForDelete.includes(m.id));
+    if(!window.confirm(`Permanently delete ${targets.length} selected picture(s)/video(s) and ALL their questions? This cannot be undone.`))return;
+    setLessonBusy(true);
+    let done=0;const failed=[];
+    for(const item of targets){
+      try{
+        const {error:qe}=await supabase.from('questions').delete().eq('media_id',item.id);
+        if(qe)throw qe;
+        const {data,error:me}=await supabase.from('media').delete().eq('id',item.id).select('id');
+        if(me)throw me;
+        if(!data?.length)throw new Error('Deletion blocked by database permissions');
+        done++;
+        setCloudMedia(old=>old.filter(m=>m.id!==item.id));
+        setPublishedLessons(old=>old.filter(m=>m.id!==item.id));
+        setSelectedForDelete(old=>old.filter(x=>x!==item.id));
+        const {error:se}=await supabase.storage.from('lesson-media').remove([item.storage_path]);
+        if(se)failed.push(`${item.title}: database deleted but storage cleanup failed`);
+      }catch(e){failed.push(`${item.title}: ${e.message||String(e)}`);}
+    }
+    setAdminMessage(`${done} of ${targets.length} selected items deleted.${failed.length?' Problems: '+failed.join('; '):''}`);
+    setLessonBusy(false);
+  }
+
   async function openCloudEditor(item){
     setSelectedMedia(item);setCloudQuestions([]);setMediaPreview('');setLessonMessage('Loading lesson…');setPage('cloud-edit');
     const [{data:questions,error:questionError},{data:preview,error:previewError}]=await Promise.all([
@@ -236,7 +282,7 @@ useEffect(() => {
       for(const q of existing){const {error}=await supabase.from('questions').update(toRecord(q)).eq('id',q.id);if(error)throw error;}
       if(added.length){const {error}=await supabase.from('questions').insert(added.map(toRecord));if(error)throw error;}
       const {data,error}=await supabase.from('questions').select('id,question_text,correct_answer,distractors,tense,category,presentation_mode,is_published,language').eq('media_id',selectedMedia.id).order('created_at');
-      if(error)throw error;setCloudQuestions(data||[]);setLessonMessage('Questions saved.');
+      if(error)throw error;setCloudQuestions(data||[]);setCloudCounts(old=>({...old,[selectedMedia.id]:(data||[]).length}));setLessonMessage('Questions saved.');
     }catch(e){setLessonMessage('Could not save: '+e.message);}finally{setLessonBusy(false);}
   }
   async function deleteCloudQuestion(question){
@@ -254,6 +300,7 @@ useEffect(() => {
       if(error)throw error;
       if(!data?.length)throw new Error('The question was not deleted. Check administrator permissions.');
       setCloudQuestions(old=>old.filter(q=>q.id!==question.id));
+      setCloudCounts(old=>({...old,[selectedMedia.id]:Math.max(0,(old[selectedMedia.id]||0)-1)}));
       setLessonMessage('Question deleted permanently.');
     }catch(e){setLessonMessage('Could not delete question: '+(e.message||String(e)));}
     finally{setLessonBusy(false);}
@@ -404,7 +451,7 @@ useEffect(() => {
 
   function openEditor(item){setEditing(item?.id||null);setDraft(item?{...item,questions:item.questions.map(q=>({...q}))}:{id:id(),title:'',type:'image',questions:[newQuestion()]});setFile(null);setError('');setPage('edit');}
   function updateQuestion(qid,field,value){setDraft(d=>({...d,questions:d.questions.map(q=>q.id===qid?{...q,[field]:value}:q)}));}
-  async function save(){if(!draft.title.trim()){setError('Please give this picture or video a title.');return;}if(!draft.questions.length||draft.questions.some(q=>!q.question.trim()||!q.answer.trim())){setError('Every question needs both a question and a correct answer.');return;}if(!editing&&!file){setError('Please choose a picture or video.');return;}try{if(file)await dbPut(draft.id,file);const entry={id:draft.id,title:draft.title.trim(),type:file?(file.type.startsWith('video/')?'video':'image'):draft.type,questions:draft.questions,url:undefined};setLibrary(old=>[...old.filter(x=>x.id!==entry.id),entry]);setPage('library');setError('');}catch(e){setError('Could not save this file. Your browser storage may be full. Try a smaller video.');}}
+  async function save(){if(!draft.title.trim()){setError('Please give this picture or video a title.');return;}if(!draft.questions.length||draft.questions.some(q=>!q.question.trim()||!q.answer.trim())){setError('Every question needs both a question and a correct answer.');return;}if(!editing&&!file){setError('Please choose a picture or video.');return;}try{if(file)await dbPut(draft.id,file);const entry={id:draft.id,title:draft.title.trim(),type:file?(file.type.startsWith('video/')?'video':'image'):draft.type,questions:draft.questions,url:undefined};setLibrary(old=>[...old.filter(x=>x.id!==entry.id),entry]);setPage('admin');setError('');}catch(e){setError('Could not save this file. Your browser storage may be full. Try a smaller video.');}}
   async function remove(item){if(!window.confirm(`Delete “${item.title}” and all its questions?`))return;try{await dbDelete(item.id);}catch{}setLibrary(x=>x.filter(y=>y.id!==item.id));}
   const count=all.reduce((sum,x)=>sum+x.questions.length,0);
  
@@ -445,8 +492,7 @@ return <div className="app">
   </button>
   <nav>
     <button onClick={()=>setPage('home')}>Home</button>
-    <button onClick={()=>setPage('library')}>Demo library</button>
-    <button onClick={()=>setPage('admin')}>Admin</button>
+    <button onClick={()=>setPage('admin')}>Pictures & Admin</button>
   </nav>
 </header>
     <main>
@@ -542,7 +588,6 @@ return <div className="app">
           )}
         </section>
       )}
-      {page==='library'&&<section className="parent"><div className="heading-row"><div><h1>Learning library</h1><p className="muted">Sample lessons and published TilliTalk lessons. Private drafts stay in the administrator dashboard.</p><div className="language-picker"><label>Learning language <select value={learnerLanguage} onChange={e=>setLearnerLanguage(e.target.value)}>{languages.map(([code,name])=><option key={code} value={code}>{name}</option>)}</select></label></div>{publicLoading&&<p role="status">Loading published lessons…</p>}{publicError&&<p role="alert" className="warning">{publicError}</p>}</div></div><div className="library-grid">{all.map(item=><article className="media-card" key={item.id}><Media item={item} src={srcFor(item)}/><div className="card-info"><h3>{item.title}</h3><p className="muted">{item.questions.length} questions · {item.type}</p></div></article>)}</div></section>}
        {page==='admin'&&<section className="parent"><h1>🔒 TilliTalk administrator</h1>
          {!session?<form className="admin-panel" onSubmit={signIn}><h2>Sign in</h2><p className="muted">Use the administrator account you created in Supabase.</p><label>Email<input type="email" autoComplete="username" required value={email} onChange={e=>setEmail(e.target.value)}/></label><label>Password<input type="password" autoComplete="current-password" required value={password} onChange={e=>setPassword(e.target.value)}/></label><button className="primary" type="submit">Sign in</button></form>:
          <><div className="heading-row"><p className="muted">Signed in as {session.user.email}</p><button onClick={signOut}>Sign out</button></div>
@@ -558,7 +603,30 @@ return <div className="app">
              <label className="upload-choose-button">Choose files<input type="file" accept="image/*,video/*,.mov,.m4v" multiple disabled={uploading} onChange={e=>{selectUploadFiles(e.target.files);e.target.value='';}}/></label>
            </div><p>{uploadFiles.length} files selected {uploadFiles.length>0&&<button type="button" disabled={uploading} onClick={()=>{setUploadFiles([]);setUploadStatus([]);}}>Clear selection</button>}</p><button className="primary" disabled={!uploadFiles.length||uploading} onClick={uploadAll}>{uploading?'Uploading…':`Upload ${uploadFiles.length} files`}</button><p className="muted">Upload files up to 50 MB each. Your Supabase project may have a lower storage upload limit. Keep this tab open until uploads finish.</p></div>
            {!!uploadStatus.length&&<div className="admin-panel"><h2>Upload results</h2><ul className="upload-results">{uploadStatus.map((x,i)=><li key={i}><span>{x.name}</span><span>{x.status}</span></li>)}</ul></div>}
-           <div className="admin-panel"><h2>Master library — {cloudMedia.length} items</h2><p className="muted">Draft media is stored in Supabase, but it will not appear in the children's game until we add questions and publish it.</p><ul className="upload-results">{cloudMedia.map(x=><li key={x.id}><button className="library-open" onClick={()=>openCloudEditor(x)}>{x.title} <span className="muted">— Edit lesson →</span></button><span>{x.is_published?'Published':'Draft'}</span><button type="button" className="danger" disabled={lessonBusy||uploading} onClick={()=>deleteCloudMedia(x)} aria-label={`Delete ${x.title} and all its questions`}>🗑 Delete</button></li>)}</ul></div></>}
+           <div className="admin-panel">
+             <div className="heading-row"><div><h2>🖼️ Your picture library — {cloudMedia.length} items</h2><p className="muted">See each picture, edit its questions, or select several to delete. Drafts stay private until published.</p></div></div>
+             <div className="manage-toolbar">
+               <input aria-label="Search pictures" placeholder="🔎 Search pictures by title…" value={librarySearch} onChange={e=>setLibrarySearch(e.target.value)}/>
+               <button type="button" disabled={!cloudMedia.length||lessonBusy||uploading} onClick={()=>setSelectedForDelete(cloudMedia.filter(m=>m.title.toLowerCase().includes(librarySearch.toLowerCase())).map(m=>m.id))}>Select all shown</button>
+               <button type="button" disabled={!selectedForDelete.length} onClick={()=>setSelectedForDelete([])}>Clear selection</button>
+               <button type="button" className="danger" disabled={!selectedForDelete.length||lessonBusy||uploading} onClick={deleteSelectedCloudMedia}>🗑 Delete selected ({selectedForDelete.length})</button>
+             </div>
+             <div className="manage-grid">
+               {cloudMedia.filter(m=>m.title.toLowerCase().includes(librarySearch.toLowerCase())).map(m=>(
+                 <article key={m.id} className={'manage-card'+(selectedForDelete.includes(m.id)?' is-selected':'')}>
+                   <div className="manage-thumb">
+                     {cloudPreviews[m.id] ? (m.media_type==='video' ? <video src={cloudPreviews[m.id]} muted playsInline preload="metadata"/> : <img src={cloudPreviews[m.id]} alt={m.title} loading="lazy"/>) : <span>🖼️ Picture preview</span>}
+                   </div>
+                   <div className="manage-details"><strong>{m.title}</strong><p>{cloudCounts[m.id]??'…'} questions · {m.is_published?'✅ Published':'📝 Draft'}</p></div>
+                   <div className="manage-actions">
+                     <button type="button" className="primary" disabled={lessonBusy||uploading} onClick={()=>openCloudEditor(m)}>✏️ Edit / Generate Questions</button>
+                     <label className="manage-select"><input type="checkbox" checked={selectedForDelete.includes(m.id)} onChange={e=>setSelectedForDelete(old=>e.target.checked?[...old,m.id]:old.filter(x=>x!==m.id))}/> Select to delete</label>
+                   </div>
+                 </article>
+               ))}
+             </div>
+             {!cloudMedia.length&&<p className="muted">No uploaded pictures yet. Upload pictures above to get started.</p>}
+           </div></>}
          </>}
          {adminMessage&&<p role="status" className="hint">{adminMessage}</p>}
        </section>}
@@ -586,7 +654,7 @@ return <div className="app">
           <div className="actions"><button className="primary" disabled={lessonBusy} onClick={saveCloudQuestions}>{lessonBusy?'Working…':'Save questions'}</button><button disabled={lessonBusy} onClick={publishCloudLesson}>Publish approved lesson</button></div>
         </div>
       </section>}
-{page==='edit'&&draft&&<section className="parent editor"><div className="heading-row"><h1>{editing?'Edit media':'Add picture or video'}</h1><button onClick={()=>setPage('library')}>← Back</button></div><label>Title<input value={draft.title} placeholder="e.g. Brown dog running" onChange={e=>setDraft(d=>({...d,title:e.target.value}))}/></label><label>{editing?'Replace picture/video (optional)':'Picture or video'}<input type="file" accept="image/*,video/mp4,video/webm,video/quicktime" onChange={e=>{const f=e.target.files?.[0];setFile(f||null);setError('');}}/></label>{file&&<p className="muted">Selected: {file.name} ({(file.size/1024/1024).toFixed(1)} MB). Large videos may exceed browser storage limits.</p>}<div className="heading-row"><h2>Questions and answers</h2><button onClick={()=>setDraft(d=>({...d,questions:[...d.questions,newQuestion()]}))}>+ Add question</button></div>{draft.questions.map((q,i)=><div className="question-editor" key={q.id}><div className="heading-row"><h3>Question {i+1}</h3><button className="danger" onClick={()=>setDraft(d=>({...d,questions:d.questions.filter(x=>x.id!==q.id)}))}>Remove</button></div><label>Question<input value={q.question} placeholder="Who is running?" onChange={e=>updateQuestion(q.id,'question',e.target.value)}/></label><label>Correct answer<input value={q.answer} placeholder="The dog" onChange={e=>updateQuestion(q.id,'answer',e.target.value)}/></label><label>Extra wrong words (separate with commas)<input value={q.distractors} placeholder="cat, man, sleeping" onChange={e=>updateQuestion(q.id,'distractors',e.target.value)}/></label></div>)}{error&&<p className="error" role="alert">{error}</p>}<div className="actions"><button onClick={()=>setPage('library')}>Cancel</button><button className="primary" onClick={save}>Save to library</button></div></section>}
+{page==='edit'&&draft&&<section className="parent editor"><div className="heading-row"><h1>{editing?'Edit media':'Add picture or video'}</h1><button onClick={()=>setPage('admin')}>← Back</button></div><label>Title<input value={draft.title} placeholder="e.g. Brown dog running" onChange={e=>setDraft(d=>({...d,title:e.target.value}))}/></label><label>{editing?'Replace picture/video (optional)':'Picture or video'}<input type="file" accept="image/*,video/mp4,video/webm,video/quicktime" onChange={e=>{const f=e.target.files?.[0];setFile(f||null);setError('');}}/></label>{file&&<p className="muted">Selected: {file.name} ({(file.size/1024/1024).toFixed(1)} MB). Large videos may exceed browser storage limits.</p>}<div className="heading-row"><h2>Questions and answers</h2><button onClick={()=>setDraft(d=>({...d,questions:[...d.questions,newQuestion()]}))}>+ Add question</button></div>{draft.questions.map((q,i)=><div className="question-editor" key={q.id}><div className="heading-row"><h3>Question {i+1}</h3><button className="danger" onClick={()=>setDraft(d=>({...d,questions:d.questions.filter(x=>x.id!==q.id)}))}>Remove</button></div><label>Question<input value={q.question} placeholder="Who is running?" onChange={e=>updateQuestion(q.id,'question',e.target.value)}/></label><label>Correct answer<input value={q.answer} placeholder="The dog" onChange={e=>updateQuestion(q.id,'answer',e.target.value)}/></label><label>Extra wrong words (separate with commas)<input value={q.distractors} placeholder="cat, man, sleeping" onChange={e=>updateQuestion(q.id,'distractors',e.target.value)}/></label></div>)}{error&&<p className="error" role="alert">{error}</p>}<div className="actions"><button onClick={()=>setPage('admin')}>Cancel</button><button className="primary" onClick={save}>Save to library</button></div></section>}
     </main><footer>Made with care for little learners 💛</footer>
   </div>;
 }
