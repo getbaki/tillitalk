@@ -104,3 +104,36 @@ body { margin:0; color:var(--tt-ink); background:linear-gradient(155deg,#e7f9ff 
 .manage-select input{width:23px;height:23px;accent-color:#d62e87}
 @media(max-width:600px){.manage-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.manage-thumb{height:130px}.manage-details{padding:10px}.manage-actions{padding:8px}.manage-actions .primary{font-size:.8rem;padding:9px 6px}.manage-toolbar button{font-size:.82rem}}
 @media(max-width:370px){.manage-grid{grid-template-columns:1fr}.manage-thumb{height:200px}}
+
+/* Calm forest backdrop INSIDE the functional learning card only.
+   Original lesson images remain unchanged. No animation. */
+.app .play-card {
+  background-color: #f6fff1;
+  background-image: url('/tillitalk-forest.svg');
+  background-position: center center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  border-color: #d5e9b6;
+}
+.app .play-card .question-line,
+.app .play-card > p.muted,
+.app .play-card .actions,
+.app .play-card .feedback {
+  position: relative;
+  z-index: 1;
+}
+.app .play-card .question-line h2 {
+  text-shadow: 0 1px 0 rgba(255,255,255,.85);
+}
+.app .play-card .answer-zone {
+  background: rgba(246,252,255,.94);
+}
+.app .play-card .lesson-media {
+  position: relative;
+  z-index: 1;
+  border: 4px solid #f7d95b;
+  box-shadow: 0 3px 12px rgba(54,101,60,.12);
+}
+@media (max-width:600px) {
+  .app .play-card { background-position: center center; background-size: cover; }
+}
