@@ -573,9 +573,12 @@ useEffect(() => {
   const correct=checked&&picked.length===answerWords.length&&picked.every((x,i)=>x.word===answerWords[i]);
   useEffect(() => { setHintVisible(false);setUsedHint(false);setFirstAttemptMade(false); }, [step, plan]);
   const stats=levelStats(plan,childOutcomes);
+  // TEMPORARY TEST: show the parent milestone after 5% of questions have been attempted.
+  // Restore the original mastery rule after testing: all attempted and 85% first-try correct.
+  const testMilestoneQuestionCount=Math.max(1,Math.ceil(stats.total*0.05));
   useEffect(()=>{
     if(!activeChildId||!plan.length||parentMilestone||childProgress[learnerLanguage]?.milestoneSeen)return;
-    if(stats.attempted===stats.total && stats.percent>=85){
+    if(stats.total>0 && stats.attempted>=testMilestoneQuestionCount){
       setParentMilestone(true);setParentUnlocked(false);setParentGateAnswer('');
       window.speechSynthesis?.cancel();
     }
@@ -689,7 +692,7 @@ return <div className="app">
                 <input type="number" value={parentGateAnswer} onChange={e=>setParentGateAnswer(e.target.value)} aria-label="Grown-up check answer" />
                 <button className="primary" onClick={()=>{if(Number(parentGateAnswer)===parentGate.a+parentGate.b)setParentUnlocked(true);else setParentGateAnswer('');}}>Continue</button>
               </> : <>
-                <p>{activeChild?.name} has reached the 85% Level 1 milestone.</p>
+                <p>{activeChild?.name} has attempted 5% of Level 1 questions (temporary test milestone).</p>
                 <p>Level 2 purchasing is not available yet. No payment will be taken. Level 1 can always be replayed.</p>
                 <button className="primary" onClick={closeMilestone}>Not now — keep practising</button>
               </>}
