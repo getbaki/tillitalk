@@ -1,0 +1,14 @@
+
+{
+  "id": "/",
+  "name": "TilliTalk - Learn Through Play",
+  "short_name": "TilliTalk",
+  "description": "A playful language-learning app for little learners.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#fffaf5",
+  "theme_color": "#fffaf5",
+  "lang": "en-US",
+  "orientation": "any"
+}
