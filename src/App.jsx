@@ -9,6 +9,7 @@ const sample = []; // Built-in demo lessons removed; only your lessons appear.
 
 const OFFLINE_DB_NAME = 'tillitalk-offline-lessons-v1';
 const OFFLINE_STORE = 'language-packs';
+const BUNDLED_LESSONS_MANIFEST = '/lessons/manifest.json';
 
 // A language pack contains approved question data and actual picture/video Blobs.
 // Expiring Supabase signed URLs are deliberately NOT stored as offline media.
@@ -244,7 +245,7 @@ const languages = [
   function closeMilestone(){
     setProgress(old=>{
       const child=old[activeChildId]||{};const language=child[learnerLanguage]||{};
-      return {...old,[activeChildId]:{...child,[learnerLanguage]:{...language,milestoneSeen:true}}};
+      return {...old,[activeChildId]:{...child,[learnerLanguage]:{...language,milestone85Seen:true}}};
     });
     setParentMilestone(false);setParentUnlocked(false);setParentGateAnswer('');
     setParentGate({a:Math.floor(Math.random()*7)+7,b:Math.floor(Math.random()*7)+4});
@@ -456,10 +457,42 @@ useEffect(() => {
     setPublishedLessons(ready);
     return ready;
   }
+  // Bundled media and questions are shipped in public/lessons and copied into
+  // the installed Android application by the Vite/Capacitor build.
+  // An absent manifest means this is still the web/offline-cache edition.
+  async function loadBundledLessons(language){
+    const response=await fetch(BUNDLED_LESSONS_MANIFEST,{cache:'no-store'});
+    if(response.status===404)return null;
+    if(!response.ok)throw new Error('The bundled lesson manifest could not be opened');
+    const manifest=await response.json();
+    if(!Array.isArray(manifest.lessons))throw new Error('The bundled lesson manifest is invalid');
+    const usable=manifest.lessons.map(item=>({
+      ...item,
+      questions:(item.questions||[]).filter(q=>q.language===language && q.question?.trim() && q.answer?.trim())
+    })).filter(item=>item.questions.length);
+    // All bundled media must be local assets, never signed or remote URLs.
+    const downloaded=await Promise.all(usable.map(async item=>{
+      if(typeof item.media!=='string' || !/^\/lessons\/media\/[a-zA-Z0-9._-]+$/.test(item.media))
+        throw new Error('Invalid bundled media path');
+      const mediaResponse=await fetch(item.media);
+      if(!mediaResponse.ok)throw new Error('Missing bundled picture: '+item.title);
+      return {id:item.id,title:item.title,type:item.type,questions:item.questions,
+        blob:await mediaResponse.blob()};
+    }));
+    return downloaded;
+  }
   async function loadPublishedLessons(){
     setPublicLoading(true);
     setPublicError('');
     try{
+      // Prefer files already inside the app, including on first launch offline.
+      // When bundled lessons exist, they are the Level 1 base; network sync is
+      // a separate future step and must not remove these installed lessons.
+      const bundled=await loadBundledLessons(learnerLanguage);
+      if(bundled!==null){
+        if(!bundled.length)setPublicError('No approved bundled questions for this language yet.');
+        return showDownloadedLessons(bundled);
+      }
       // Each language has its own complete, downloadable lesson pack.
       const language=learnerLanguage;
       if(!navigator.onLine)throw new Error('Offline');
@@ -573,12 +606,12 @@ useEffect(() => {
   const correct=checked&&picked.length===answerWords.length&&picked.every((x,i)=>x.word===answerWords[i]);
   useEffect(() => { setHintVisible(false);setUsedHint(false);setFirstAttemptMade(false); }, [step, plan]);
   const stats=levelStats(plan,childOutcomes);
-  // TEMPORARY TEST: show the parent milestone after 5% of questions have been attempted.
-  // Restore the original mastery rule after testing: all attempted and 85% first-try correct.
-  const testMilestoneQuestionCount=Math.max(1,Math.ceil(stats.total*0.05));
+  // Real mastery: every unique question attempted, with at least 85% correct on first attempt.
+  // milestone85Seen is separate from the earlier 5% test flag, so testers can verify it.
+  const masteryReached=stats.total>0 && stats.attempted===stats.total && stats.firstCorrect/stats.total>=0.85;
   useEffect(()=>{
-    if(!activeChildId||!plan.length||parentMilestone||childProgress[learnerLanguage]?.milestoneSeen)return;
-    if(stats.total>0 && stats.attempted>=testMilestoneQuestionCount){
+    if(!activeChildId||!plan.length||parentMilestone||childProgress[learnerLanguage]?.milestone85Seen)return;
+    if(masteryReached){
       setParentMilestone(true);setParentUnlocked(false);setParentGateAnswer('');
       window.speechSynthesis?.cancel();
     }
@@ -692,7 +725,7 @@ return <div className="app">
                 <input type="number" value={parentGateAnswer} onChange={e=>setParentGateAnswer(e.target.value)} aria-label="Grown-up check answer" />
                 <button className="primary" onClick={()=>{if(Number(parentGateAnswer)===parentGate.a+parentGate.b)setParentUnlocked(true);else setParentGateAnswer('');}}>Continue</button>
               </> : <>
-                <p>{activeChild?.name} has attempted 5% of Level 1 questions (temporary test milestone).</p>
+                <p>{activeChild?.name} has completed every Level 1 question and answered at least 85% correctly on the first try!</p>
                 <p>Level 2 purchasing is not available yet. No payment will be taken. Level 1 can always be replayed.</p>
                 <button className="primary" onClick={closeMilestone}>Not now — keep practising</button>
               </>}
