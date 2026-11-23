@@ -120,6 +120,18 @@ const tryAgainMessages = [
 
 function newQuestion(){return {id:id(),question:'',answer:'',distractors:''};}
 function makePlan(items){const queues=shuffle(items.filter(x=>x.questions?.some(q=>q.question.trim()&&q.answer.trim()))).map(item=>({item,questions:shuffle(item.questions.filter(q=>q.question.trim()&&q.answer.trim()))}));const plan=[];while(queues.some(x=>x.questions.length)){for(const q of queues){const count=Math.min(q.questions.length,Math.random()<.5?1:2);for(let i=0;i<count;i++)plan.push({mediaId:q.item.id,question:q.questions.shift()});}}return plan;}
+const PROFILES_KEY = 'tillitalk-child-profiles-v1';
+const PROGRESS_KEY = 'tillitalk-child-progress-v1';
+const AVATARS = ['🦊','🐻','🐰','🦁','🐼','🐸','🐨','🦋'];
+function readSaved(key, fallback){try{const value=JSON.parse(localStorage.getItem(key));return value && typeof value==='object'?value:fallback;}catch{return fallback;}}
+function questionKey(item){return `${item.mediaId}:${item.question.id || item.question.question + '|' + item.question.answer}`;}
+function levelStats(plan, outcomes){
+  const unique=new Set(plan.map(questionKey));
+  const attempts=[...unique].filter(key=>outcomes[key]);
+  const firstCorrect=attempts.filter(key=>outcomes[key]==='correct').length;
+  return {total:unique.size,attempted:attempts.length,firstCorrect,percent:unique.size?Math.round(firstCorrect/unique.size*100):0};
+}
+
 function Media({item,src}){if(!src)return <div className="media-placeholder">🖼️ Add a picture or video</div>;return item.type==='video'?<video key={src} src={src} controls playsInline preload="metadata" className="lesson-media"/>:<img className="lesson-media" src={src} alt={item.title}/>;}
 export default function App(){
   const [library,setLibrary]=useState(loadLibrary);
@@ -195,6 +207,48 @@ const languages = [
   const [picked,setPicked]=useState([]);
   const [checked,setChecked]=useState(false);
   const [hintVisible,setHintVisible]=useState(false);
+  const [profiles,setProfiles]=useState(()=>{const saved=readSaved(PROFILES_KEY,[]);return Array.isArray(saved)?saved:[];});
+  const [activeChildId,setActiveChildId]=useState(()=>localStorage.getItem('tillitalk-active-child-v1')||'');
+  const [newChildName,setNewChildName]=useState('');
+  const [newChildAvatar,setNewChildAvatar]=useState('🦊');
+  const [progress,setProgress]=useState(()=>readSaved(PROGRESS_KEY,{}));
+  const [usedHint,setUsedHint]=useState(false);
+  const [firstAttemptMade,setFirstAttemptMade]=useState(false);
+  const [parentMilestone,setParentMilestone]=useState(false);
+  const [parentGateAnswer,setParentGateAnswer]=useState('');
+  const [parentGate,setParentGate]=useState(()=>({a:Math.floor(Math.random()*7)+7,b:Math.floor(Math.random()*7)+4}));
+  const [parentUnlocked,setParentUnlocked]=useState(false);
+  const activeChild=profiles.find(p=>p.id===activeChildId);
+  const childProgress=progress[activeChildId]||{};
+  const childOutcomes=childProgress[learnerLanguage]?.outcomes||{};
+  useEffect(()=>{localStorage.setItem(PROFILES_KEY,JSON.stringify(profiles));},[profiles]);
+  useEffect(()=>{localStorage.setItem(PROGRESS_KEY,JSON.stringify(progress));},[progress]);
+  useEffect(()=>{localStorage.setItem('tillitalk-active-child-v1',activeChildId);},[activeChildId]);
+  function addChild(){
+    const name=newChildName.trim().slice(0,30);
+    if(!name)return;
+    const child={id:id(),name,avatar:newChildAvatar};
+    setProfiles(old=>[...old,child]);setActiveChildId(child.id);setNewChildName('');
+  }
+  function recordOutcome(outcome){
+    if(!activeChildId||!current)return;
+    const key=questionKey(current);
+    setProgress(old=>{
+      const child=old[activeChildId]||{};
+      const language=child[learnerLanguage]||{};
+      if(language.outcomes?.[key])return old;
+      return {...old,[activeChildId]:{...child,[learnerLanguage]:{...language,outcomes:{...language.outcomes,[key]:outcome}}}};
+    });
+  }
+  function resetQuestionState(){setPicked([]);setChecked(false);setHintVisible(false);setUsedHint(false);setFirstAttemptMade(false);}
+  function closeMilestone(){
+    setProgress(old=>{
+      const child=old[activeChildId]||{};const language=child[learnerLanguage]||{};
+      return {...old,[activeChildId]:{...child,[learnerLanguage]:{...language,milestoneSeen:true}}};
+    });
+    setParentMilestone(false);setParentUnlocked(false);setParentGateAnswer('');
+    setParentGate({a:Math.floor(Math.random()*7)+7,b:Math.floor(Math.random()*7)+4});
+  }
   const [wordOrder,setWordOrder]=useState([]);
   
   const [correctCount, setCorrectCount] = useState(0);
@@ -517,13 +571,21 @@ useEffect(() => {
   const current=plan[step];const currentItem=all.find(x=>x.id===current?.mediaId);
   const answerWords=current?.question.answer.trim().split(/\s+/).filter(Boolean)||[];
   const correct=checked&&picked.length===answerWords.length&&picked.every((x,i)=>x.word===answerWords[i]);
-  useEffect(() => { setHintVisible(false); }, [step, plan]);
+  useEffect(() => { setHintVisible(false);setUsedHint(false);setFirstAttemptMade(false); }, [step, plan]);
+  const stats=levelStats(plan,childOutcomes);
+  useEffect(()=>{
+    if(!activeChildId||!plan.length||parentMilestone||childProgress[learnerLanguage]?.milestoneSeen)return;
+    if(stats.attempted===stats.total && stats.percent>=85){
+      setParentMilestone(true);setParentUnlocked(false);setParentGateAnswer('');
+      window.speechSynthesis?.cancel();
+    }
+  },[activeChildId,plan,progress,learnerLanguage,parentMilestone]);
   useEffect(() => {
     if (!hintVisible) return;
     const timer = setTimeout(() => setHintVisible(false), 5000);
     return () => clearTimeout(timer);
   }, [hintVisible, step, plan]);
-  async function start(){const lessons=await loadPublishedLessons()||[];const p=makePlan([...sample,...library,...lessons]);setPlan(p);setStep(0);setPicked([]);setChecked(false);setHintVisible(false);setWordOrder([]);setPage('play');}
+  async function start(){if(!activeChildId){setPage('profiles');return;}const lessons=await loadPublishedLessons()||[];const p=makePlan([...sample,...library,...lessons]);setPlan(p);setStep(0);setPicked([]);setChecked(false);resetQuestionState();setWordOrder([]);setPage('play');}
   useEffect(()=>{if(!current)return;const words=current.question.answer.trim().split(/\s+/).filter(Boolean).map((word,i)=>({id:`a${i}`,word}));const extra=current.question.distractors.split(',').map(x=>x.trim()).filter(Boolean).map((word,i)=>({id:`e${i}`,word}));setWordOrder(shuffle([...words,...extra]));},[step,plan]);
   
 useEffect(() => {
@@ -586,7 +648,21 @@ return <div className="app">
 </nav>
 </header>
     <main>
-      {page==='home'&&<section className="hero"><div className="hero-emoji">🐶 💬 🌟</div><h1>Let's talk!</h1><p>Look, listen, and make sentences with words.</p><div className="language-picker"><label>Learning language <select value={learnerLanguage} onChange={e=>setLearnerLanguage(e.target.value)}>{languages.map(([code,name])=><option key={code} value={code}>{name}</option>)}</select></label></div><button className="primary big" disabled={publicLoading} onClick={start}>{publicLoading?'Loading lessons…':'▶ Start learning'}</button><p className="muted">{all.length} pictures & videos · {count} questions</p>{publicError&&<p className="hint" role="status">{publicError}</p>}<div className="hint">Questions switch pictures after 1–2 turns, then revisit earlier pictures.</div></section>}
+      {page==='profiles'&&<section className="hero" style={{maxWidth:580,margin:'auto'}}>
+        <h1>🦊 Who is learning today?</h1>
+        <p>Choose your own animal and nickname. Everyone's progress stays separate on this device.</p>
+        <div style={{display:'flex',gap:10,flexWrap:'wrap',justifyContent:'center',marginBottom:20}}>
+          {profiles.map(child=><button key={child.id} type="button" className={child.id===activeChildId?'primary':''} onClick={()=>{setActiveChildId(child.id);setPage('home');}} style={{fontSize:18,padding:14}}>{child.avatar} {child.name}</button>)}
+        </div>
+        <h2>Add a child</h2>
+        <label>Nickname <input maxLength={30} value={newChildName} onChange={e=>setNewChildName(e.target.value)} placeholder="First name or nickname" /></label>
+        <div style={{display:'flex',gap:8,flexWrap:'wrap',justifyContent:'center',margin:'14px 0'}}>
+          {AVATARS.map(avatar=><button key={avatar} type="button" aria-label={`Choose ${avatar}`} aria-pressed={newChildAvatar===avatar} onClick={()=>setNewChildAvatar(avatar)} style={{fontSize:25,border:newChildAvatar===avatar?'3px solid #8a65b5':undefined}}>{avatar}</button>)}
+        </div>
+        <button className="primary" type="button" disabled={!newChildName.trim()} onClick={()=>{addChild();setPage('home');}}>Add child</button>
+        <button type="button" onClick={()=>setPage('home')}>Back home</button>
+      </section>}
+      {page==='home'&&<section className="hero"><div className="hero-emoji">🐶 💬 🌟</div><h1>Let's talk!</h1><p>Look, listen, and make sentences with words.</p><div className="language-picker"><label>Learning language <select value={learnerLanguage} onChange={e=>setLearnerLanguage(e.target.value)}>{languages.map(([code,name])=><option key={code} value={code}>{name}</option>)}</select></label></div><div style={{margin:'14px 0'}}><button type="button" onClick={()=>setPage('profiles')}>{activeChild?`${activeChild.avatar} ${activeChild.name} · Switch child`:'🐻 Choose or add a child'}</button></div><button className="primary big" disabled={publicLoading} onClick={start}>{publicLoading?'Loading lessons…':'▶ Start learning'}</button><p className="muted">{all.length} pictures & videos · {count} questions</p>{publicError&&<p className="hint" role="status">{publicError}</p>}<div className="hint">Questions switch pictures after 1–2 turns, then revisit earlier pictures.</div></section>}
       {page === 'play' && (
         <section className="play-area">
           <div aria-label="Voice controls" style={{display:'flex',alignItems:'center',gap:'12px',flexWrap:'wrap',justifyContent:'flex-end',padding:'8px 0 16px'}}>
@@ -603,7 +679,22 @@ return <div className="app">
               <span style={{minWidth:'40px'}}>{Math.round(voiceVolume * 100)}%</span>
             </label>
           </div>
-          {!current ? (
+          {activeChild&&<p className="muted">{activeChild.avatar} {activeChild.name} · Level 1 progress: {stats.attempted}/{stats.total} attempted · {stats.percent}% first-try correct</p>}
+          {parentMilestone ? (
+            <div className="hero" role="dialog" aria-modal="true" aria-label="Grown-up time">
+              <h1>🌟 Wonderful learning!</h1>
+              <h2>Please give the tablet to a grown-up.</h2>
+              {!parentUnlocked ? <>
+                <p>Grown-up check: What is {parentGate.a} + {parentGate.b}?</p>
+                <input type="number" value={parentGateAnswer} onChange={e=>setParentGateAnswer(e.target.value)} aria-label="Grown-up check answer" />
+                <button className="primary" onClick={()=>{if(Number(parentGateAnswer)===parentGate.a+parentGate.b)setParentUnlocked(true);else setParentGateAnswer('');}}>Continue</button>
+              </> : <>
+                <p>{activeChild?.name} has reached the 85% Level 1 milestone.</p>
+                <p>Level 2 purchasing is not available yet. No payment will be taken. Level 1 can always be replayed.</p>
+                <button className="primary" onClick={closeMilestone}>Not now — keep practising</button>
+              </>}
+            </div>
+          ) : !current ? (
             <div className="hero">
               <h1>🎉 Amazing work!</h1>
               <p>You finished this round.</p>
@@ -655,12 +746,11 @@ return <div className="app">
                   </div>
                 )}
                 <div className="actions">
-                  <button type="button" onClick={() => setHintVisible(true)} disabled={correct}>💡 Hint</button>
+                  <button type="button" onClick={() => {setHintVisible(true);setUsedHint(true);}} disabled={correct}>💡 Hint</button>
                   <button type="button" onClick={() => {
                     window.speechSynthesis?.cancel();
-                    setHintVisible(false);
-                    setPicked([]);
-                    setChecked(false);
+                    recordOutcome('skip');
+                    resetQuestionState();
                     setStep(s => s + 1);
                   }}>Skip ➜</button>
                   <button onClick={() => { setPicked([]); setChecked(false); }}>Clear</button>
@@ -668,14 +758,14 @@ return <div className="app">
                     <button className="primary" onClick={() => {
                       window.speechSynthesis?.cancel();
                       setStep(s => s + 1);
-                      setPicked([]);
-                      setChecked(false);
+                      resetQuestionState();
                     }}>Next ➜</button>
                   ) : (
                     <button className="primary" disabled={!picked.length} onClick={() => {
                       const isCorrect = picked.length === answerWords.length &&
                         picked.every((x, i) => x.word === answerWords[i]);
                       setChecked(true);
+                      if (!firstAttemptMade) {recordOutcome(isCorrect && !usedHint ? 'correct' : usedHint ? 'hint' : 'wrong');setFirstAttemptMade(true);}
                       if (isCorrect) {
                         const nextCount = correctCount + 1;
                         setCorrectCount(nextCount);
