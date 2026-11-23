@@ -1,8 +1,668 @@
+import { supabase } from './supabase';
+import './TilliTalkFun.css';
+import { useEffect, useMemo, useRef, useState } from 'react';
+
+const DB_NAME = 'tillitalk-media-v2';
+const STORE = 'media';
+const LIBRARY_KEY = 'tillitalk-library-v2';
+const sample = []; // Built-in demo lessons removed; only your lessons appear.
+
+const OFFLINE_DB_NAME = 'tillitalk-offline-lessons-v1';
+const OFFLINE_STORE = 'language-packs';
+
+// A language pack contains approved question data and actual picture/video Blobs.
+// Expiring Supabase signed URLs are deliberately NOT stored as offline media.
+function openOfflineDb(){
+  return new Promise((resolve,reject)=>{
+    const request=indexedDB.open(OFFLINE_DB_NAME,1);
+    request.onupgradeneeded=()=>request.result.createObjectStore(OFFLINE_STORE);
+    request.onsuccess=()=>resolve(request.result);
+    request.onerror=()=>reject(request.error);
+  });
+}
+async function readOfflinePack(language){
+  const db=await openOfflineDb();
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(OFFLINE_STORE,'readonly');
+    const request=tx.objectStore(OFFLINE_STORE).get(language);
+    request.onsuccess=()=>resolve(request.result||null);
+    request.onerror=()=>reject(request.error);
+    tx.oncomplete=()=>db.close();
+    tx.onabort=()=>db.close();
+  });
+}
+async function writeOfflinePack(language,lessons){
+  const db=await openOfflineDb();
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(OFFLINE_STORE,'readwrite');
+    tx.objectStore(OFFLINE_STORE).put({savedAt:Date.now(),lessons},language);
+    tx.oncomplete=()=>{db.close();resolve();};
+    tx.onerror=()=>{db.close();reject(tx.error);};
+    tx.onabort=()=>{db.close();reject(tx.error||new Error('Offline save was cancelled'));};
+  });
+}
+
+
+function id(){return crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`;}
+function loadLibrary(){try{const x=JSON.parse(localStorage.getItem(LIBRARY_KEY));return Array.isArray(x)?x:[];}catch{return [];}}
+function openDb(){return new Promise((resolve,reject)=>{const req=indexedDB.open(DB_NAME,1);req.onupgradeneeded=()=>req.result.createObjectStore(STORE);req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);});}
+async function dbPut(key,file){const db=await openDb();return new Promise((resolve,reject)=>{const tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).put(file,key);tx.oncomplete=()=>{db.close();resolve();};tx.onerror=()=>{db.close();reject(tx.error);};});}
+async function dbGet(key){const db=await openDb();return new Promise((resolve,reject)=>{const tx=db.transaction(STORE);const req=tx.objectStore(STORE).get(key);req.onsuccess=()=>{db.close();resolve(req.result);};req.onerror=()=>{db.close();reject(req.error);};});}
+async function dbDelete(key){const db=await openDb();return new Promise((resolve,reject)=>{const tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).delete(key);tx.oncomplete=()=>{db.close();resolve();};tx.onerror=()=>{db.close();reject(tx.error);};});}
+function shuffle(arr){const a=[...arr];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+
+function say(text, language = 'en', volume = 1) {
+  if (!('speechSynthesis' in window)) return;
+
+  const speechLanguages = {
+    en: 'en-GB',
+    nl: 'nl-NL',
+    fr: 'fr-FR',
+    es: 'es-ES',
+    de: 'de-DE',
+    pt: 'pt-BR',
+    ar: 'ar-SA',
+    sw: 'sw-KE',
+    ig: 'ig-NG',
+    yo: 'yo-NG',
+    ha: 'ha-NG',
+    zh: 'zh-CN',
+    ru: 'ru-RU'
+  };
+
+  window.speechSynthesis.cancel();
+
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = speechLanguages[language] || 'en-GB';
+  // A gentle, clear pace for early language learners.
+  utterance.rate = 0.72;
+  utterance.pitch = 1.08;
+
+  // Voice names vary by Android device and browser. Prefer a natural-sounding
+  // female voice in the selected language, falling back to any matching voice.
+  const voices = window.speechSynthesis.getVoices();
+  const target = utterance.lang.toLowerCase();
+  const base = target.split('-')[0];
+  const candidates = voices.filter(v => v.lang.toLowerCase().split('-')[0] === base);
+  const femaleHints = /female|woman|samantha|victoria|karen|moira|tessa|zira|aria|jenny|susan|ava|serena|sonia|natasha|google uk english female/i;
+  const preferred = candidates.find(v => femaleHints.test(v.name) && v.lang.toLowerCase() === target)
+    || candidates.find(v => femaleHints.test(v.name))
+    || candidates.find(v => v.lang.toLowerCase() === target)
+    || candidates[0];
+  if (preferred) utterance.voice = preferred;
+  utterance.volume = Math.max(0, Math.min(1, volume));
+
+  window.speechSynthesis.speak(utterance);
+}
+
+
+const correctMessages = [
+  '🌟 Wonderful!',
+  '👏 Good job!',
+  '🎉 You did it!',
+  "💛 You're doing so well!",
+  '⭐ Fantastic!',
+  '🦊 Clever thinking!',
+  '✨ Brilliant!',
+  '🥳 Amazing work!',
+  '🌈 Keep shining!'
+];
+
+const tryAgainMessages = [
+  "💛 Don't worry, you'll get it!",
+  '🌈 Good try! Have another go.',
+  '🦊 Keep going! You can do it!',
+  "🌟 You're learning! Try again.",
+  '💪 Take your time. You can do this!',
+  '💕 Every try helps you learn!'
+];
+
+
+function newQuestion(){return {id:id(),question:'',answer:'',distractors:''};}
+function makePlan(items){const queues=shuffle(items.filter(x=>x.questions?.some(q=>q.question.trim()&&q.answer.trim()))).map(item=>({item,questions:shuffle(item.questions.filter(q=>q.question.trim()&&q.answer.trim()))}));const plan=[];while(queues.some(x=>x.questions.length)){for(const q of queues){const count=Math.min(q.questions.length,Math.random()<.5?1:2);for(let i=0;i<count;i++)plan.push({mediaId:q.item.id,question:q.questions.shift()});}}return plan;}
+function Media({item,src}){if(!src)return <div className="media-placeholder">🖼️ Add a picture or video</div>;return item.type==='video'?<video key={src} src={src} controls playsInline preload="metadata" className="lesson-media"/>:<img className="lesson-media" src={src} alt={item.title}/>;}
+export default function App(){
+  const [library,setLibrary]=useState(loadLibrary);
+  const [session,setSession]=useState(null);
+  const [adminAllowed,setAdminAllowed]=useState(false);
+  const [adminChecking,setAdminChecking]=useState(true);
+  const [email,setEmail]=useState('');
+  const [password,setPassword]=useState('');
+  const [adminMessage,setAdminMessage]=useState('');
+  const [cloudMedia,setCloudMedia]=useState([]);
+  const [cloudCounts,setCloudCounts]=useState({});
+  const [cloudPreviews,setCloudPreviews]=useState({});
+  const [selectedForDelete,setSelectedForDelete]=useState([]);
+  const [librarySearch,setLibrarySearch]=useState('');
+  const [uploadFiles,setUploadFiles]=useState([]);
+  const [uploadStatus,setUploadStatus]=useState([]);
+  const [uploading,setUploading]=useState(false);
+  const [dragActive,setDragActive]=useState(false);
+  const [selectedMedia,setSelectedMedia]=useState(null);
+  const [mediaPreview,setMediaPreview]=useState('');
+  const [cloudQuestions,setCloudQuestions]=useState([]);
+  const [lessonLanguage,setLessonLanguage]=useState('en');
+  const [learnerLanguage,setLearnerLanguage]=useState('en');
+  const [voiceMuted, setVoiceMuted] = useState(() => localStorage.getItem('tillitalk-voice-muted') === 'true');
+  const [voiceVolume, setVoiceVolume] = useState(() => {
+    const saved = Number(localStorage.getItem('tillitalk-voice-volume'));
+    return Number.isFinite(saved) && saved >= 0 && saved <= 1 ? saved : 1;
+  });
+  function speak(text, language = learnerLanguage) {
+    if (!voiceMuted && voiceVolume > 0) say(text, language, voiceVolume);
+  }
+  function toggleMute() {
+    setVoiceMuted(previous => {
+      if (!previous) window.speechSynthesis?.cancel();
+      return !previous;
+    });
+  }
+  useEffect(() => { localStorage.setItem('tillitalk-voice-muted', String(voiceMuted)); }, [voiceMuted]);
+  useEffect(() => { localStorage.setItem('tillitalk-voice-volume', String(voiceVolume)); }, [voiceVolume]);
+  const [lessonMode,setLessonMode]=useState('helper');
+  const [helperLanguage,setHelperLanguage]=useState('en');
+  const [lessonBusy,setLessonBusy]=useState(false);
+  const [lessonMessage,setLessonMessage]=useState('');
+  const [publishedLessons,setPublishedLessons]=useState([]);
+  const offlineObjectUrls=useRef([]);
+  const [publicLoading,setPublicLoading]=useState(false);
+  const [publicError,setPublicError]=useState('');
+  
+const languages = [
+  ['en', 'English'],
+  ['nl', 'Dutch'],
+  ['fr', 'French'],
+  ['es', 'Spanish'],
+  ['de', 'German'],
+  ['pt', 'Portuguese'],
+  ['ar', 'Arabic'],
+  ['sw', 'Swahili'],
+  ['ig', 'Igbo'],
+  ['yo', 'Yoruba'],
+  ['ha', 'Hausa'],
+  ['zh', 'Mandarin Chinese (Pinyin)'],
+  ['ru', 'Russian']
+];
+
+  const [urls,setUrls]=useState({});
+  const [page,setPage]=useState('home');
+  const [editing,setEditing]=useState(null);
+  const [draft,setDraft]=useState(null);
+  const [file,setFile]=useState(null);
+  const [error,setError]=useState('');
+  const [plan,setPlan]=useState([]);
+  const [step,setStep]=useState(0);
+  const [picked,setPicked]=useState([]);
+  const [checked,setChecked]=useState(false);
+  const [hintVisible,setHintVisible]=useState(false);
+  const [wordOrder,setWordOrder]=useState([]);
+  
+  const [correctCount, setCorrectCount] = useState(0);
+  const [celebration, setCelebration] = useState('');
+  
+useEffect(() => {
+  if (!celebration) return;
+
+  const timer = setTimeout(() => {
+    setCelebration('');
+  }, celebration === 'band' ? 6700 : 5000);
+
+  return () => clearTimeout(timer);
+}, [celebration]);
+
+  const all=useMemo(()=>[...sample,...library,...publishedLessons], [library,publishedLessons]);
+  useEffect(()=>{localStorage.setItem(LIBRARY_KEY,JSON.stringify(library));},[library]);
+  useEffect(()=>{let active=true;const made=[];(async()=>{const map={};for(const item of library){try{const blob=await dbGet(item.id);if(blob){const url=URL.createObjectURL(blob);made.push(url);map[item.id]=url;}}catch{}}if(active)setUrls(map);else made.forEach(URL.revokeObjectURL);})();return()=>{active=false;made.forEach(URL.revokeObjectURL);};},[library]);
+  useEffect(()=>{
+    let mounted=true;
+    async function applySession(nextSession){
+      if(!mounted)return;
+      setSession(nextSession);
+      setAdminAllowed(false);
+      setAdminChecking(!!nextSession);
+      if(!nextSession){setCloudMedia([]);return;}
+      const {data,error}=await supabase.from('app_admins').select('user_id').eq('user_id',nextSession.user.id).maybeSingle();
+      if(!mounted)return;
+      setAdminAllowed(!error && !!data);
+      setAdminChecking(false);
+      if(error)setAdminMessage('Could not check administrator access: '+error.message);
+    }
+    supabase.auth.getSession().then(({data})=>applySession(data.session));
+    const {data:{subscription}}=supabase.auth.onAuthStateChange((_event,nextSession)=>{
+      // Defer Supabase queries until after the auth event callback returns.
+      setTimeout(()=>applySession(nextSession),0);
+    });
+    return()=>{mounted=false;subscription.unsubscribe();};
+  },[]);
+  useEffect(()=>{
+    if(!adminAllowed)return;
+    let cancelled=false;
+    supabase.from('media').select('id,title,media_type,storage_path,is_published,created_at')
+      .order('created_at',{ascending:false}).then(({data,error})=>{
+        if(cancelled)return;
+        if(error)setAdminMessage('Could not load library: '+error.message);
+        else setCloudMedia(data||[]);
+      });
+    return()=>{cancelled=true;};
+  },[adminAllowed]);
+  useEffect(()=>{
+    if(!adminAllowed || !cloudMedia.length){setCloudCounts({});setCloudPreviews({});return;}
+    let cancelled=false;
+    (async()=>{
+      const ids=cloudMedia.map(m=>m.id);
+      // Query only media_id; no sensitive question content is needed for counts.
+      const {data,error}=await supabase.from('questions').select('media_id').in('media_id',ids);
+      if(!cancelled && !error){
+        const counts={}; for(const q of data||[])counts[q.media_id]=(counts[q.media_id]||0)+1;
+        setCloudCounts(counts);
+      }
+      // Signed thumbnails are private and expire after one hour.
+      const previews={};
+      for(let i=0;i<cloudMedia.length;i+=15){
+        const batch=cloudMedia.slice(i,i+15);
+        await Promise.all(batch.map(async m=>{
+          const {data}=await supabase.storage.from('lesson-media').createSignedUrl(m.storage_path,3600);
+          if(data?.signedUrl)previews[m.id]=data.signedUrl;
+        }));
+        if(cancelled)return;
+        setCloudPreviews({...previews});
+      }
+    })();
+    return()=>{cancelled=true;};
+  },[adminAllowed,cloudMedia]);
+
+  async function deleteSelectedCloudMedia(){
+    if(lessonBusy||uploading||!selectedForDelete.length)return;
+    const targets=cloudMedia.filter(m=>selectedForDelete.includes(m.id));
+    if(!window.confirm(`Permanently delete ${targets.length} selected picture(s)/video(s) and ALL their questions? This cannot be undone.`))return;
+    setLessonBusy(true);
+    let done=0;const failed=[];
+    for(const item of targets){
+      try{
+        const {error:qe}=await supabase.from('questions').delete().eq('media_id',item.id);
+        if(qe)throw qe;
+        const {data,error:me}=await supabase.from('media').delete().eq('id',item.id).select('id');
+        if(me)throw me;
+        if(!data?.length)throw new Error('Deletion blocked by database permissions');
+        done++;
+        setCloudMedia(old=>old.filter(m=>m.id!==item.id));
+        setPublishedLessons(old=>old.filter(m=>m.id!==item.id));
+        setSelectedForDelete(old=>old.filter(x=>x!==item.id));
+        const {error:se}=await supabase.storage.from('lesson-media').remove([item.storage_path]);
+        if(se)failed.push(`${item.title}: database deleted but storage cleanup failed`);
+      }catch(e){failed.push(`${item.title}: ${e.message||String(e)}`);}
+    }
+    setAdminMessage(`${done} of ${targets.length} selected items deleted.${failed.length?' Problems: '+failed.join('; '):''}`);
+    setLessonBusy(false);
+  }
+
+  async function openCloudEditor(item){
+    setSelectedMedia(item);setCloudQuestions([]);setMediaPreview('');setLessonMessage('Loading lesson…');setPage('cloud-edit');
+    const [{data:questions,error:questionError},{data:preview,error:previewError}]=await Promise.all([
+      supabase.from('questions').select('id,question_text,correct_answer,distractors,tense,category,presentation_mode,is_published,language').eq('media_id',item.id).order('created_at'),
+      supabase.storage.from('lesson-media').createSignedUrl(item.storage_path,3600)
+    ]);
+    if(questionError)setLessonMessage('Cannot load questions: '+questionError.message);
+    else {setCloudQuestions(questions||[]);setLessonMessage('');}
+    if(previewError)setLessonMessage('Cannot preview media: '+previewError.message);
+    else setMediaPreview(preview?.signedUrl||'');
+  }
+  function blankCloudQuestion(){return {id:'new-'+id(),question_text:'',correct_answer:'',distractors:[],tense:'present_continuous',category:'what',presentation_mode:'visible',is_published:false,language:lessonLanguage};}
+  function changeCloudQuestion(qid,field,value){setCloudQuestions(old=>old.map(q=>q.id===qid?{...q,[field]:value}:q));}
+  async function saveCloudQuestions(){
+    if(!selectedMedia||lessonBusy)return;
+    if(cloudQuestions.some(q=>!q.question_text.trim()||!q.correct_answer.trim())){setLessonMessage('Please fill in every question and answer, or remove empty questions.');return;}
+    setLessonBusy(true);setLessonMessage('Saving questions…');
+    try{
+      const existing=cloudQuestions.filter(q=>!q.id.startsWith('new-'));
+      const added=cloudQuestions.filter(q=>q.id.startsWith('new-'));
+      const toRecord=q=>({media_id:selectedMedia.id,question_text:q.question_text.trim(),correct_answer:q.correct_answer.trim(),distractors:Array.isArray(q.distractors)?q.distractors:q.distractors.split(',').map(x=>x.trim()).filter(Boolean),tense:q.tense,category:q.category,presentation_mode:q.presentation_mode,language:q.language,is_published:!!q.is_published});
+      for(const q of existing){const {error}=await supabase.from('questions').update(toRecord(q)).eq('id',q.id);if(error)throw error;}
+      if(added.length){const {error}=await supabase.from('questions').insert(added.map(toRecord));if(error)throw error;}
+      const {data,error}=await supabase.from('questions').select('id,question_text,correct_answer,distractors,tense,category,presentation_mode,is_published,language').eq('media_id',selectedMedia.id).order('created_at');
+      if(error)throw error;setCloudQuestions(data||[]);setCloudCounts(old=>({...old,[selectedMedia.id]:(data||[]).length}));setLessonMessage('Questions saved.');
+    }catch(e){setLessonMessage('Could not save: '+e.message);}finally{setLessonBusy(false);}
+  }
+  async function deleteCloudQuestion(question){
+    if(lessonBusy || !selectedMedia) return;
+    if(!window.confirm(`Delete this question permanently?\n\n${question.question_text || '(New question)'}`)) return;
+    if(question.id.startsWith('new-')){
+      setCloudQuestions(old=>old.filter(q=>q.id!==question.id));
+      setLessonMessage('Unsaved question removed.');
+      return;
+    }
+    setLessonBusy(true);
+    setLessonMessage('Deleting question…');
+    try{
+      const {data,error}=await supabase.from('questions').delete().eq('id',question.id).eq('media_id',selectedMedia.id).select('id');
+      if(error)throw error;
+      if(!data?.length)throw new Error('The question was not deleted. Check administrator permissions.');
+      setCloudQuestions(old=>old.filter(q=>q.id!==question.id));
+      setCloudCounts(old=>({...old,[selectedMedia.id]:Math.max(0,(old[selectedMedia.id]||0)-1)}));
+      setLessonMessage('Question deleted permanently.');
+    }catch(e){setLessonMessage('Could not delete question: '+(e.message||String(e)));}
+    finally{setLessonBusy(false);}
+  }
+  async function deleteCloudMedia(item){
+    if(lessonBusy || uploading) return;
+    if(!window.confirm(`Permanently delete “${item.title}” and ALL its questions? This cannot be undone.`))return;
+    setLessonBusy(true);
+    setAdminMessage('Deleting picture/video and its questions…');
+    try{
+      // Delete the database records before removing the stored file.
+      const {error:questionError}=await supabase.from('questions').delete().eq('media_id',item.id);
+      if(questionError)throw questionError;
+      const {data:deleted,error:mediaError}=await supabase.from('media').delete().eq('id',item.id).select('id');
+      if(mediaError)throw mediaError;
+      if(!deleted?.length)throw new Error('The picture was not deleted. Check administrator permissions.');
+      setCloudMedia(old=>old.filter(m=>m.id!==item.id));
+      setPublishedLessons(old=>old.filter(m=>m.id!==item.id));
+      if(selectedMedia?.id===item.id){setSelectedMedia(null);setCloudQuestions([]);setPage('admin');}
+      const {error:storageError}=await supabase.storage.from('lesson-media').remove([item.storage_path]);
+      setAdminMessage(storageError ? 'Picture and questions deleted from the library, but the stored file could not be removed: '+storageError.message : 'Picture/video and its questions deleted permanently.');
+    }catch(e){setAdminMessage('Could not finish deletion: '+(e.message||String(e))+'. Some questions may already have been deleted.');}
+    finally{setLessonBusy(false);}
+  }
+  async function generateCloudQuestions(){
+    if(!selectedMedia||lessonBusy)return;
+    if(selectedMedia.media_type==='video'){setLessonMessage('AI analysis of videos is not available yet. You can still add questions manually.');return;}
+    setLessonBusy(true);setLessonMessage('AI is examining the picture. This may take a moment…');
+    try{
+      const {data,error}=await supabase.functions.invoke('generate-questions',{body:{media_id:selectedMedia.id,language:lessonLanguage}});
+      if(error)throw new Error(data?.error||error.message);
+      if(data?.error)throw new Error(data.error);
+      if(!Array.isArray(data?.questions)||!data.questions.length)throw new Error('No questions returned.');
+      const suggestions=data.questions.map(q=>({...blankCloudQuestion(),question_text:q.question_text||'',correct_answer:q.correct_answer||'',distractors:Array.isArray(q.distractors)?q.distractors:[],tense:q.tense||'present_continuous',category:q.category||'what',presentation_mode:q.presentation_mode||'visible',language:lessonLanguage}));
+      setCloudQuestions(old=>[...old,...suggestions]);setLessonMessage(`${suggestions.length} AI suggestions added. Review and save them before publishing.`);
+    }catch(e){setLessonMessage('AI generation unavailable: '+e.message+' Check the Edge Function setup instructions.');}
+    finally{setLessonBusy(false);}
+  }
+  async function publishCloudLesson(){
+    if(!selectedMedia||lessonBusy)return;
+    if(cloudQuestions.some(q=>q.id.startsWith('new-'))){setLessonMessage('Save your questions before publishing.');return;}
+    const approved=cloudQuestions.filter(q=>q.is_published);
+    if(!approved.length){setLessonMessage('Tick at least one approved question before publishing.');return;}
+    setLessonBusy(true);
+    const {error}=await supabase.from('media').update({is_published:true}).eq('id',selectedMedia.id);
+    if(error)setLessonMessage('Could not publish: '+error.message);
+    else{setSelectedMedia(m=>({...m,is_published:true}));setCloudMedia(old=>old.map(m=>m.id===selectedMedia.id?{...m,is_published:true}:m));setLessonMessage('Lesson published! Approved questions can now be used by learners.');}
+    setLessonBusy(false);
+  }
+  // Revoke only the previous offline preview URLs. Session URLs are created
+  // again when a new session starts; avoid retaining expired signed URLs.
+  function showDownloadedLessons(downloaded){
+    offlineObjectUrls.current.forEach(URL.revokeObjectURL);
+    const urls=[];
+    const ready=downloaded.map(item=>{
+      const url=URL.createObjectURL(item.blob);
+      urls.push(url);
+      return {id:item.id,title:item.title,type:item.type,url,questions:item.questions};
+    });
+    offlineObjectUrls.current=urls;
+    setPublishedLessons(ready);
+    return ready;
+  }
+  async function loadPublishedLessons(){
+    setPublicLoading(true);
+    setPublicError('');
+    try{
+      // Each language has its own complete, downloadable lesson pack.
+      const language=learnerLanguage;
+      if(!navigator.onLine)throw new Error('Offline');
+      const {data:media,error:mediaError}=await supabase.from('media')
+        .select('id,title,media_type,storage_path').eq('is_published',true);
+      if(mediaError)throw mediaError;
+      const {data:questions,error:questionError}=await supabase.from('questions')
+        .select('id,media_id,question_text,correct_answer,distractors,language')
+        .eq('is_published',true).eq('language',language);
+      if(questionError)throw questionError;
+
+      const usable=(media||[]).map(m=>({
+        ...m,
+        questions:(questions||[]).filter(q=>q.media_id===m.id).map(q=>({
+          id:q.id,question:q.question_text,answer:q.correct_answer,
+          distractors:(q.distractors||[]).join(', ')
+        }))
+      })).filter(m=>m.questions.some(q=>q.question?.trim()&&q.answer?.trim()));
+
+      // Do not replace a previously saved pack with a partially downloaded pack.
+      const downloaded=await Promise.all(usable.map(async m=>{
+        const response=await fetch(import.meta.env.VITE_SUPABASE_URL+'/functions/v1/smart-worker',{
+          method:'POST',
+          headers:{'Content-Type':'application/json',apikey:import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY},
+          body:JSON.stringify({media_id:m.id})
+        });
+        if(!response.ok)throw new Error('A published picture could not be accessed');
+        const payload=await response.json();
+        if(!payload?.url)throw new Error('Missing published picture link');
+        const mediaResponse=await fetch(payload.url);
+        if(!mediaResponse.ok)throw new Error('A published picture could not be downloaded');
+        const blob=await mediaResponse.blob();
+        return {id:m.id,title:m.title,type:m.media_type,questions:m.questions,blob};
+      }));
+
+      // Keep the new lessons playable even if the device has insufficient storage.
+      try{
+        await writeOfflinePack(language,downloaded);
+      }catch(saveError){
+        setPublicError('Lessons loaded, but the device could not save them for offline use. Free up storage and try again.');
+      }
+      return showDownloadedLessons(downloaded);
+    }catch(error){
+      try{
+        const saved=await readOfflinePack(learnerLanguage);
+        if(saved?.lessons?.length){
+          setPublicError('Using downloaded lessons. Connect to Wi-Fi to check for new lessons.');
+          return showDownloadedLessons(saved.lessons);
+        }
+        setPublishedLessons([]);
+        setPublicError('No downloaded lessons are available yet. Connect to Wi-Fi and start learning once to download them.');
+        return [];
+      }catch{
+        setPublishedLessons([]);
+        setPublicError('Could not open downloaded lessons. Connect to Wi-Fi and try again.');
+        return [];
+      }
+    }finally{
+      setPublicLoading(false);
+    }
+  }
+  useEffect(()=>{
+    if(page==='library')loadPublishedLessons();
+  },[page,learnerLanguage]);
+  async function signIn(e){
+    e.preventDefault();setAdminMessage('Signing in…');
+    const {error}=await supabase.auth.signInWithPassword({email:email.trim(),password});
+    setPassword('');
+    setAdminMessage(error?'Sign-in failed: '+error.message:'Signed in. Checking administrator access…');
+  }
+  async function signOut(){await supabase.auth.signOut();setAdminMessage('Signed out.');}
+  function selectUploadFiles(files){
+    if(uploading)return;
+    const accepted=Array.from(files||[]).filter(f=>f.type.startsWith('image/')||f.type.startsWith('video/')||/\.(gif|png|jpe?g|webp|bmp|avif|mp4|webm|mov|m4v)$/i.test(f.name));
+    setUploadFiles(old=>{
+      const seen=new Set(old.map(f=>`${f.name}:${f.size}:${f.lastModified}`));
+      return [...old,...accepted.filter(f=>!seen.has(`${f.name}:${f.size}:${f.lastModified}`))];
+    });
+    setUploadStatus([]);
+    setAdminMessage(accepted.length===0?'No supported pictures or videos found.':'');
+  }
+  async function uploadAll(){
+    if(!adminAllowed||uploading||!uploadFiles.length)return;
+    setUploading(true);setAdminMessage('Uploading files. Keep this tab open.');
+    const statuses=uploadFiles.map(f=>({name:f.name,status:'Waiting'}));
+    setUploadStatus([...statuses]);let successes=0;
+    for(let i=0;i<uploadFiles.length;i++){
+      const file=uploadFiles[i];
+      statuses[i]={name:file.name,status:'Uploading…'};setUploadStatus([...statuses]);
+      try{
+        if(!file.type.startsWith('image/')&&!file.type.startsWith('video/'))throw new Error('Only images and videos are supported');
+        if(file.size>50*1024*1024)throw new Error('File exceeds the 50 MB uploader limit');
+        const ext=(file.name.split('.').pop()||'bin').replace(/[^a-z0-9]/gi,'').toLowerCase().slice(0,10);
+        const path=`library/${crypto.randomUUID()}.${ext||'bin'}`;
+        const {error:storageError}=await supabase.storage.from('lesson-media').upload(path,file,{contentType:file.type||'application/octet-stream',upsert:false});
+        if(storageError)throw storageError;
+        const title=file.name.replace(/\.[^.]+$/,'').replace(/[_-]+/g,' ').trim()||'Untitled media';
+        const {data,error:dbError}=await supabase.from('media').insert({title,media_type:file.type.startsWith('video/')?'video':'image',storage_path:path,is_published:false,owner_id:null}).select('id,title,media_type,storage_path,is_published,created_at').single();
+        if(dbError){await supabase.storage.from('lesson-media').remove([path]);throw dbError;}
+        setCloudMedia(prev=>[data,...prev]);successes++;
+        statuses[i]={name:file.name,status:'Uploaded as draft'};
+      }catch(err){statuses[i]={name:file.name,status:'Failed: '+(err.message||String(err))};}
+      setUploadStatus([...statuses]);
+    }
+    setUploading(false);setUploadFiles([]);
+    setAdminMessage(`${successes} of ${statuses.length} files uploaded. Drafts are private and not yet visible in the learning game.`);
+  }
+  const srcFor=item=>item.url||urls[item.id];
+  const current=plan[step];const currentItem=all.find(x=>x.id===current?.mediaId);
+  const answerWords=current?.question.answer.trim().split(/\s+/).filter(Boolean)||[];
+  const correct=checked&&picked.length===answerWords.length&&picked.every((x,i)=>x.word===answerWords[i]);
+  useEffect(() => { setHintVisible(false); }, [step, plan]);
+  useEffect(() => {
+    if (!hintVisible) return;
+    const timer = setTimeout(() => setHintVisible(false), 5000);
+    return () => clearTimeout(timer);
+  }, [hintVisible, step, plan]);
+  async function start(){const lessons=await loadPublishedLessons()||[];const p=makePlan([...sample,...library,...lessons]);setPlan(p);setStep(0);setPicked([]);setChecked(false);setHintVisible(false);setWordOrder([]);setPage('play');}
+  useEffect(()=>{if(!current)return;const words=current.question.answer.trim().split(/\s+/).filter(Boolean).map((word,i)=>({id:`a${i}`,word}));const extra=current.question.distractors.split(',').map(x=>x.trim()).filter(Boolean).map((word,i)=>({id:`e${i}`,word}));setWordOrder(shuffle([...words,...extra]));},[step,plan]);
+  
+useEffect(() => {
+  if (page !== 'play' || !current) return;
+
+  const timer = setTimeout(() => {
+    speak(current.question.question, learnerLanguage);
+  }, 400);
+
+  return () => {
+    clearTimeout(timer);
+    window.speechSynthesis?.cancel();
+  };
+}, [page, step, plan, learnerLanguage]);
+
+  function openEditor(item){setEditing(item?.id||null);setDraft(item?{...item,questions:item.questions.map(q=>({...q}))}:{id:id(),title:'',type:'image',questions:[newQuestion()]});setFile(null);setError('');setPage('edit');}
+  function updateQuestion(qid,field,value){setDraft(d=>({...d,questions:d.questions.map(q=>q.id===qid?{...q,[field]:value}:q)}));}
+  async function save(){if(!draft.title.trim()){setError('Please give this picture or video a title.');return;}if(!draft.questions.length||draft.questions.some(q=>!q.question.trim()||!q.answer.trim())){setError('Every question needs both a question and a correct answer.');return;}if(!editing&&!file){setError('Please choose a picture or video.');return;}try{if(file)await dbPut(draft.id,file);const entry={id:draft.id,title:draft.title.trim(),type:file?(file.type.startsWith('video/')?'video':'image'):draft.type,questions:draft.questions,url:undefined};setLibrary(old=>[...old.filter(x=>x.id!==entry.id),entry]);setPage('admin');setError('');}catch(e){setError('Could not save this file. Your browser storage may be full. Try a smaller video.');}}
+  async function remove(item){if(!window.confirm(`Delete “${item.title}” and all its questions?`))return;try{await dbDelete(item.id);}catch{}setLibrary(x=>x.filter(y=>y.id!==item.id));}
+  const count=all.reduce((sum,x)=>sum+x.questions.length,0);
+ 
+return <div className="app">
+  {page === 'play' && celebration === 'streamers' && (
+    <div className="streamer-celebration" aria-label="Celebration!" role="status">
+      <span>🎊</span>
+      <span>🎉</span>
+      <span>✨</span>
+      <span>🎊</span>
+      <span>🎉</span>
+      <strong>Hooray! You're a star!</strong>
+    </div>
+  )}
+
+ 
+{page === 'play' && celebration === 'band' && (
+  <div className="tilli-parade" role="status" aria-label="Hooray! The animal marching band is passing by!">
+    <div className="tilli-parade-march" aria-hidden="true">
+      <span className="tilli-parade-animal" style={{animationDelay:'0s'}}>🐘<small>🥁</small></span>
+      <span className="tilli-parade-animal" style={{animationDelay:'.13s'}}>🦁<small>🎺</small></span>
+      <span className="tilli-parade-animal" style={{animationDelay:'.26s'}}>🦒<small>🥁</small></span>
+      <span className="tilli-parade-animal" style={{animationDelay:'.39s'}}>🐒<small>🚩</small></span>
+      <span className="tilli-parade-animal" style={{animationDelay:'.52s'}}>🐻<small>🎶</small></span>
+    </div>
+  </div>
+)}
+
+
+  
+    <header className="topbar">
+  <button className="brand" onClick={()=>setPage('home')}>
+    <img
+      src="/tillitalk-logo.png"
+      alt="TilliTalk"
+      style={{height:'64px',width:'auto',maxWidth:'100%',objectFit:'contain'}}
+    />
+  </button>
+ <nav>
+  <button onClick={()=>setPage('home')}>Home</button>
+  <button hidden onClick={()=>setPage('admin')}>Pictures & Admin</button>
+</nav>
+</header>
+    <main>
+      {page==='home'&&<section className="hero"><div className="hero-emoji">🐶 💬 🌟</div><h1>Let's talk!</h1><p>Look, listen, and make sentences with words.</p><div className="language-picker"><label>Learning language <select value={learnerLanguage} onChange={e=>setLearnerLanguage(e.target.value)}>{languages.map(([code,name])=><option key={code} value={code}>{name}</option>)}</select></label></div><button className="primary big" disabled={publicLoading} onClick={start}>{publicLoading?'Loading lessons…':'▶ Start learning'}</button><p className="muted">{all.length} pictures & videos · {count} questions</p>{publicError&&<p className="hint" role="status">{publicError}</p>}<div className="hint">Questions switch pictures after 1–2 turns, then revisit earlier pictures.</div></section>}
+      {page === 'play' && (
+        <section className="play-area">
+          <div aria-label="Voice controls" style={{display:'flex',alignItems:'center',gap:'12px',flexWrap:'wrap',justifyContent:'flex-end',padding:'8px 0 16px'}}>
+            <button type="button" onClick={toggleMute} aria-label={voiceMuted ? 'Unmute voice' : 'Mute voice'} aria-pressed={voiceMuted} style={{padding:'9px 14px',borderRadius:'12px'}}>
+              {voiceMuted ? '🔇 Unmute' : '🔊 Mute'}
+            </button>
+            <label htmlFor="voice-volume" style={{display:'flex',alignItems:'center',gap:'9px'}}>
+              Volume
+              <input id="voice-volume" type="range" min="0" max="100" step="5" value={Math.round(voiceVolume * 100)} onChange={e => {
+                const next = Number(e.target.value) / 100;
+                setVoiceVolume(next);
+                if (next === 0) window.speechSynthesis?.cancel();
+              }} aria-label="Voice volume" style={{width:'110px'}} />
+              <span style={{minWidth:'40px'}}>{Math.round(voiceVolume * 100)}%</span>
+            </label>
+          </div>
+          {!current ? (
+            <div className="hero">
+              <h1>🎉 Amazing work!</h1>
+              <p>You finished this round.</p>
+              <button className="primary" onClick={start}>Play again</button>
+              <button onClick={() => setPage('home')}>Home</button>
+            </div>
+          ) : (
+            <>
+              <div className="progress">
+                <span>Question {step + 1} of {plan.length}</span>
+                <div className="progress-track">
+                  <div style={{ width: `${(step / plan.length) * 100}%` }} />
+                </div>
+              </div>
+              <div className="play-card">
+                <Media item={currentItem} src={srcFor(currentItem)} />
+                <div className="question-line">
+                  <h2>{current.question.question}</h2>
+                  <button aria-label="Hear question" className="sound" onClick={() => speak(current.question.question, learnerLanguage)}>🔊</button>
+                </div>
+                <p className="muted">Tap the words in the right order.</p>
+                <div className="answer-zone">
+                  {picked.length ? picked.map(x => (
+                    <button key={x.id} className="word selected" onClick={() => {
+                      setPicked(p => p.filter(w => w.id !== x.id));
+                      setChecked(false);
+                    }}>{x.word}</button>
+                  )) : <span className="muted">Your sentence goes here…</span>}
+                </div>
+                <div className="word-bank">
+                  {wordOrder.filter(x => !picked.some(p => p.id === x.id)).map(x => (
+                    <button key={x.id} className="word" onClick={() => {
+                      setPicked(p => [...p, x]);
+                      setChecked(false);
+                      speak(x.word, learnerLanguage);
+                    }}>{x.word}</button>
+                  ))}
+                </div>
+                {checked && (
+                  <div role="status" className={'feedback ' + (correct ? 'good' : 'try')}>
+                    {correct
                       ? correctMessages[step % correctMessages.length]
                       : tryAgainMessages[step % tryAgainMessages.length]}
                   </div>
                 )}
+                {hintVisible && !correct && (
+                  <div className="hint" role="status" aria-live="polite">
+                    💡 {current.question.answer}
+                  </div>
+                )}
                 <div className="actions">
+                  <button type="button" onClick={() => setHintVisible(true)} disabled={correct}>💡 Hint</button>
+                  <button type="button" onClick={() => {
+                    window.speechSynthesis?.cancel();
+                    setHintVisible(false);
+                    setPicked([]);
+                    setChecked(false);
+                    setStep(s => s + 1);
+                  }}>Skip ➜</button>
                   <button onClick={() => { setPicked([]); setChecked(false); }}>Clear</button>
                   {correct ? (
                     <button className="primary" onClick={() => {
