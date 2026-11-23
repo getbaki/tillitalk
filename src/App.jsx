@@ -490,10 +490,9 @@ return <div className="app">
       style={{height:'64px',width:'auto',maxWidth:'100%',objectFit:'contain'}}
     />
   </button>
-  <nav>
-    <button onClick={()=>setPage('home')}>Home</button>
-    <button onClick={()=>setPage('admin')}>Pictures & Admin</button>
-  </nav>
+ <nav>
+  <button onClick={()=>setPage('home')}>Home</button>
+</nav>
 </header>
     <main>
       {page==='home'&&<section className="hero"><div className="hero-emoji">🐶 💬 🌟</div><h1>Let's talk!</h1><p>Look, listen, and make sentences with words.</p><div className="language-picker"><label>Learning language <select value={learnerLanguage} onChange={e=>setLearnerLanguage(e.target.value)}>{languages.map(([code,name])=><option key={code} value={code}>{name}</option>)}</select></label></div><button className="primary big" disabled={publicLoading} onClick={start}>{publicLoading?'Loading lessons…':'▶ Start learning'}</button><p className="muted">{all.length} pictures & videos · {count} questions</p><div className="hint">Questions switch pictures after 1–2 turns, then revisit earlier pictures.</div></section>}
