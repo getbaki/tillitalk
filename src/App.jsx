@@ -492,6 +492,7 @@ return <div className="app">
   </button>
  <nav>
   <button onClick={()=>setPage('home')}>Home</button>
+  <button onClick={()=>setPage('admin')}>Pictures & Admin</button>
 </nav>
 </header>
     <main>
