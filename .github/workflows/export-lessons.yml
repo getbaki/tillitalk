@@ -1,0 +1,35 @@
+name: Export TilliTalk Offline Lessons
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  export-lessons:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Open TilliTalk project
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Export approved lessons
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: python scripts/export_approved_lessons.py
+
+      - name: Save offline lesson package
+        uses: actions/upload-artifact@v4
+        with:
+          name: TilliTalk-Offline-Lessons
+          path: public/lessons/
+          if-no-files-found: error
+          retention-days: 7
