@@ -18,12 +18,29 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-      - name: Check preinstalled Android SDK
+      - name: Configure Android SDK
+        shell: bash
         run: |
-          test -d "$ANDROID_HOME"
-          command -v sdkmanager
-          sdkmanager --list_installed
-          sdkmanager "platforms;android-35" "build-tools;35.0.0"
+          set -euo pipefail
+          SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          MANAGER="$(find "$SDK/cmdline-tools" -type f -name sdkmanager 2>/dev/null | sort -V | tail -n 1 || true)"
+          if [ -z "$MANAGER" ]; then
+            SDK="$RUNNER_TEMP/android-sdk"
+            mkdir -p "$SDK/cmdline-tools"
+            curl --fail --location --retry 3 https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -o "$RUNNER_TEMP/android-tools.zip"
+            unzip -q "$RUNNER_TEMP/android-tools.zip" -d "$SDK/cmdline-tools"
+            mv "$SDK/cmdline-tools/cmdline-tools" "$SDK/cmdline-tools/latest"
+            MANAGER="$SDK/cmdline-tools/latest/bin/sdkmanager"
+          fi
+          export ANDROID_HOME="$SDK" ANDROID_SDK_ROOT="$SDK"
+          echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$SDK" >> "$GITHUB_ENV"
+          dirname "$MANAGER" >> "$GITHUB_PATH"
+          echo "$SDK/platform-tools" >> "$GITHUB_PATH"
+          set +o pipefail
+          yes | "$MANAGER" --sdk_root="$SDK" --licenses
+          set -o pipefail
+          "$MANAGER" --sdk_root="$SDK" "platform-tools" "platforms;android-35" "build-tools;35.0.0"
       - name: Install dependencies
         run: |
           if [ -f package-lock.json ]; then npm ci; else npm install; fi
