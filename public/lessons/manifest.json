@@ -1,0 +1,1172 @@
+{
+  "version": 1,
+  "lessons": [
+    {
+      "id": "00553b89-a2d2-4be4-aa20-98502d25a0a6",
+      "title": "OIG2.todadJVh LuA",
+      "type": "image",
+      "media": "/lessons/media/00553b89-a2d2-4be4-aa20-98502d25a0a6.jpg",
+      "questions": [
+        {
+          "id": "16e66891-f6dc-434d-96fa-cf8fa5b6285f",
+          "language": "en",
+          "question": "What is the woman doing?",
+          "answer": "The woman is vacuuming the carpet",
+          "distractors": "these, those, women, are"
+        },
+        {
+          "id": "56eaecff-b263-4040-8651-e8fc90dd2614",
+          "language": "en",
+          "question": "What color is the vacuum cleaner?",
+          "answer": "It is blue",
+          "distractors": "these, those, are, were"
+        },
+        {
+          "id": "722353eb-7139-4c32-a0da-0d8a72efa29d",
+          "language": "en",
+          "question": "Where is the woman vacuuming?",
+          "answer": "The woman is vacuuming in the living room",
+          "distractors": "these, those, women, are"
+        },
+        {
+          "id": "8ce8b21c-d01a-4b13-bb1a-e16135f00795",
+          "language": "en",
+          "question": "What is the woman wearing on her feet?",
+          "answer": "She is wearing white sneakers.",
+          "distractors": "these, those, women, are"
+        }
+      ]
+    },
+    {
+      "id": "09b8c905-32b9-453e-99b3-800a128a189a",
+      "title": "OIG4",
+      "type": "image",
+      "media": "/lessons/media/09b8c905-32b9-453e-99b3-800a128a189a.jpg",
+      "questions": [
+        {
+          "id": "057c202d-65e1-4c47-94ef-0c9d60705d85",
+          "language": "en",
+          "question": "What is the girl wearing?",
+          "answer": "She is wearing a pink dress.",
+          "distractors": "these, those, are, were"
+        },
+        {
+          "id": "525c0fad-fd60-4f1a-be64-f4ec77c9d96d",
+          "language": "en",
+          "question": "What is she doing with the ball?",
+          "answer": "She is catching the ball.",
+          "distractors": "these, those, are, were"
+        },
+        {
+          "id": "8f21b620-080b-44cf-bd09-b5e6e5aa8fc4",
+          "language": "en",
+          "question": "What is the girl doing?",
+          "answer": "The girl is playing.",
+          "distractors": "these, those, are, were"
+        },
+        {
+          "id": "c080bd69-7a9a-489c-9b00-978b8f887931",
+          "language": "en",
+          "question": "How many colours has the ball the girl is playing with?",
+          "answer": "The ball has three colours.",
+          "distractors": "these, those, are, were, is"
+        },
+        {
+          "id": "ef4d4458-7d44-4c0a-9ee9-21e2d053fc3b",
+          "language": "en",
+          "question": "Where is the girl playing?",
+          "answer": "The girl is playing on the beach.",
+          "distractors": "these, those, are, were"
+        }
+      ]
+    },
+    {
+      "id": "0dc3889c-9b47-4f83-a00b-4cf7ff044d68",
+      "title": "d4438032 9fd3 4e1a 88c1 c6d888e566aa",
+      "type": "image",
+      "media": "/lessons/media/0dc3889c-9b47-4f83-a00b-4cf7ff044d68.jpg",
+      "questions": [
+        {
+          "id": "a0d7edce-cab9-47da-8c67-1491d7a7bfbd",
+          "language": "en",
+          "question": "What color dress is the woman wearing?",
+          "answer": "The dress is blue",
+          "distractors": "red, these, those, are, am"
+        },
+        {
+          "id": "ac9c2577-48ad-4144-8a4b-e3e6844022b1",
+          "language": "en",
+          "question": "What is happening in the picture?",
+          "answer": "A woman is holding a boy's hands",
+          "distractors": "an, us, them, your, our, feet"
+        },
+        {
+          "id": "c2fcaba2-9386-46d7-b4ca-acc210d79686",
+          "language": "en",
+          "question": "What do you see in the picture?",
+          "answer": "I see a boy and a woman",
+          "distractors": "we, look, they, an"
+        },
+        {
+          "id": "cbd6d678-47dd-4098-8eb5-a1dc071f9d2d",
+          "language": "en",
+          "question": "Where are the woman and the boy standing?",
+          "answer": "They are standing on a footpath.",
+          "distractors": "in, car, the, grass"
+        },
+        {
+          "id": "e703e3e6-005b-44d2-a240-c83999bfc29b",
+          "language": "en",
+          "question": "What color is the boy's shirt?",
+          "answer": "The shirt is yellow",
+          "distractors": "these, are, my, his, her"
+        }
+      ]
+    },
+    {
+      "id": "15c7658f-2d26-4633-b78b-9b100f05de16",
+      "title": "29d73a7f 1599 48ed a0b3 379691296885",
+      "type": "image",
+      "media": "/lessons/media/15c7658f-2d26-4633-b78b-9b100f05de16.jpg",
+      "questions": [
+        {
+          "id": "2c1dff68-a3d7-46ff-b01c-8b48fdbb23f5",
+          "language": "en",
+          "question": "What is the boy doing in the grass?",
+          "answer": "The boy is lying in the grass.",
+          "distractors": "these, those, are, were"
+        },
+        {
+          "id": "65663c64-6b74-478d-a080-29fb7dc9cd0a",
+          "language": "en",
+          "question": "What color is the boy's shirt?",
+          "answer": "It is yellow.",
+          "distractors": "these, those, are, were"
+        },
+        {
+          "id": "eb109985-d3a7-488d-8f0a-2978f62b3704",
+          "language": "en",
+          "question": "Where is the boy playing?",
+          "answer": "The boy is playing in a field.",
+          "distractors": "these, those, are, were"
+        }
+      ]
+    },
+    {
+      "id": "1fd7af0b-79f2-4cc0-b19c-d5a2a13c24dd",
+      "title": "dc6f838d 27a7 4b99 81e1 3bfe25f4c046",
+      "type": "image",
+      "media": "/lessons/media/1fd7af0b-79f2-4cc0-b19c-d5a2a13c24dd.jpg",
+      "questions": [
+        {
+          "id": "0be6a18e-46df-4540-a856-f4dfad8adcc2",
+          "language": "en",
+          "question": "What is the woman doing with her hands?",
+          "answer": "The woman is covering her face with her hands",
+          "distractors": "these, those, women, are"
+        },
+        {
+          "id": "720a4aee-c9b5-41bc-bb4e-215c27812497",
+          "language": "en",
+          "question": "Where is the woman sitting?",
+          "answer": "The woman is sitting at a table.",
+          "distractors": "these, those, women, are"
+        },
+        {
+          "id": "98ab21f0-e917-457f-ae05-320dc410af1e",
+          "language": "en",
+          "question": "Is this a sad woman?",
+          "answer": "Yes it is a sad woman",
+          "distractors": "are, were, am, an"
+        }
+      ]
+    },
+    {
+      "id": "28cd84ad-bde5-4cd4-9ec6-b425588963bf",
+      "title": "d96260f6 1f30 4510 b8fc bfb47b467edc",
+      "type": "image",
+      "media": "/lessons/media/28cd84ad-bde5-4cd4-9ec6-b425588963bf.jpg",
+      "questions": [
+        {
+          "id": "07eed994-77ba-4d11-bd86-21612d65c5b7",
+          "language": "en",
+          "question": "Is the man alone on the street?",
+          "answer": "No there are people on the street",
+          "distractors": "these, those, are, were"
+        },
+        {
+          "id": "7f367f0f-d871-4088-aca7-6a08ad5eb958",
+          "language": "en",
+          "question": "What is the man doing with the camera?",
+          "answer": "The man is taking a photo with the camera.",
+          "distractors": "these, those, are, were"
+        },
+        {
+          "id": "c2114fc1-1454-484f-b00f-1bdfc31708be",
+          "language": "en",
+          "question": "Where is the man taking pictures?",
+          "answer": "The man is taking pictures in a street.",
+          "distractors": "these, those, are, were"
+        }
+      ]
+    },
+    {
+      "id": "29c515be-2953-460d-aa80-a731fb5e03e4",
+      "title": "OIG2 (1)",
+      "type": "image",
+      "media": "/lessons/media/29c515be-2953-460d-aa80-a731fb5e03e4.jpg",
+      "questions": [
+        {
+          "id": "08ab9759-ac41-4896-9cf3-3e698983f76f",
+          "language": "en",
+          "question": "What is the boy wearing?",
+          "answer": "He is wearing shorts",
+          "distractors": "these, those, are, were"
+        },
+        {
+          "id": "1bbcfea6-f730-48cf-95dc-20359fcca676",
+          "language": "en",
+          "question": "What is the boy doing on the tree branch?",
+          "answer": "The boy is hanging from the tree branch",
+          "distractors": "these, those, are, were"
+        },
+        {
+          "id": "29429217-0bdd-4ba6-9d7c-bbdd5fec902e",
+          "language": "en",
+          "question": "Is the boy barefoot?",
+          "answer": "Yes the boy is barefoot.",
+          "distractors": "these, those, are, were"
+        },
+        {
+          "id": "b2b0401b-e887-4566-a408-89b3e1824e1c",
+          "language": "en",
+          "question": "Where is the boy playing?",
+          "answer": "The boy is playing outside",
+          "distractors": "these, those, are, were"
+        }
+      ]
+    },
+    {
+      "id": "4952843b-6e8e-4fea-955a-9e59e52403cd",
+      "title": "6beac7bc b73e 40d1 b1fa 4122f17f9721 (1)",
+      "type": "image",
+      "media": "/lessons/media/4952843b-6e8e-4fea-955a-9e59e52403cd.jpg",
+      "questions": [
+        {
+          "id": "013d6eaf-c400-486a-a54f-45ac3641cd26",
+          "language": "en",
+          "question": "Where is the man standing?",
+          "answer": "He is standing in the snow.",
+          "distractors": "these, those, men, are"
+        },
+        {
+          "id": "dbad9c9e-75a1-482e-a6b6-5dd3e649f6c3",
+          "language": "en",
+          "question": "What is the man doing?",
+          "answer": "The man is shooting an arrow.",
+          "distractors": "these, those, men, are"
+        }
+      ]
+    },
+    {
+      "id": "587ec930-26d8-4b60-aa59-ece069b41371",
+      "title": "OIG3.tdXPXCOPmM",
+      "type": "image",
+      "media": "/lessons/media/587ec930-26d8-4b60-aa59-ece069b41371.jpg",
+      "questions": [
+        {
+          "id": "552a91f4-74f7-4bfc-85d7-714732cf1871",
+          "language": "en",
+          "question": "What is the mother cat doing with her kittens?",
+          "answer": "The mother cat is lying with her kittens.",
+          "distractors": "sitting, these, those, cats"
+        },
+        {
+          "id": "5e310c0e-a765-4bd3-b122-21eeda8e54ec",
+          "language": "en",
+          "question": "Which kitten is a different color from the others?",
+          "answer": "The kitten on the right is a different color.",
+          "distractors": "left, these, those, at"
+        },
+        {
+          "id": "97c2c903-057b-41a4-9f48-f227dc1e2e76",
+          "language": "en",
+          "question": "Where are the kittens sleeping?",
+          "answer": "They are sleeping on a blanket.",
+          "distractors": "under, these, those, is"
+        },
+        {
+          "id": "c489efb2-3370-42e4-88e1-8dd8a28fb9c4",
+          "language": "en",
+          "question": "How many kittens are sleeping next to the mother cat?",
+          "answer": "Four kittens are sleeping next to the mother cat.",
+          "distractors": "Three, is, was, am"
+        }
+      ]
+    },
+    {
+      "id": "5d44cf85-9872-4517-98ba-71153ebaefe7",
+      "title": "25ed00e0 4081 4696 bc98 1999e30fc739",
+      "type": "image",
+      "media": "/lessons/media/5d44cf85-9872-4517-98ba-71153ebaefe7.jpg",
+      "questions": [
+        {
+          "id": "29a12edd-2102-447e-818f-4fc9b8271510",
+          "language": "en",
+          "question": "Where is the dog lying?",
+          "answer": "It is lying on the grass.",
+          "distractors": "these, those, dogs, are"
+        },
+        {
+          "id": "3482f603-f255-4166-9647-54c288bd8416",
+          "language": "en",
+          "question": "What color is the dog?",
+          "answer": "The dog is golden-brown.",
+          "distractors": "these, those, dogs, are"
+        },
+        {
+          "id": "4e883e49-1bcc-4abc-ba27-a9f076d54e1a",
+          "language": "en",
+          "question": "What is the dog doing with the stick?",
+          "answer": "The dog is chewing the stick.",
+          "distractors": "these, those, dogs, are"
+        }
+      ]
+    },
+    {
+      "id": "61fe28b3-c693-477b-a615-f038ec3e3e6a",
+      "title": "93c26192 e9b0 4fb2 b8e3 804ecb83c72c",
+      "type": "image",
+      "media": "/lessons/media/61fe28b3-c693-477b-a615-f038ec3e3e6a.jpg",
+      "questions": [
+        {
+          "id": "6bc71ba0-8bd0-4a7f-bb34-cde597412ec2",
+          "language": "en",
+          "question": "What is the dog doing with its paws?",
+          "answer": "The dog is touching the fence with its paws.",
+          "distractors": "these, those, dogs, are"
+        },
+        {
+          "id": "73708f9c-fd34-4a05-a5eb-4a863531a0c7",
+          "language": "en",
+          "question": "Is the dog looking at the wall?",
+          "answer": "Yes, the dog is looking at the wall.",
+          "distractors": "these, those, dogs, are"
+        },
+        {
+          "id": "eeaef40c-5671-4dd7-a7a8-7506b8730f50",
+          "language": "en",
+          "question": "Where is the dog standing?",
+          "answer": "The dog is standing in the grass.",
+          "distractors": "these, those, dogs, are"
+        }
+      ]
+    },
+    {
+      "id": "6206b324-b4d1-404e-a3d5-3492fc584352",
+      "title": "OIG2 (2)",
+      "type": "image",
+      "media": "/lessons/media/6206b324-b4d1-404e-a3d5-3492fc584352.jpg",
+      "questions": [
+        {
+          "id": "14287a46-00c0-44f1-8474-67006ea6db1b",
+          "language": "en",
+          "question": "What is the boy doing with the comb?",
+          "answer": "The boy is combing his hair with the comb",
+          "distractors": "these, those, children, are"
+        },
+        {
+          "id": "b07355e2-97d3-4997-a0ab-bf7179fd33d5",
+          "language": "en",
+          "question": "Where is the child standing?",
+          "answer": "The child is standing in the bathroom.",
+          "distractors": "these, those, children, are"
+        },
+        {
+          "id": "e37f7f89-7735-4010-bef9-73db5661bae7",
+          "language": "en",
+          "question": "What is the boy doing with the comb?",
+          "answer": "He is combing his hair",
+          "distractors": "she, my, wash, in"
+        },
+        {
+          "id": "ed887e8a-0a47-404e-b13c-32530e5e2edc",
+          "language": "en",
+          "question": "What is the child wearing?",
+          "answer": "The child is wearing a white shirt",
+          "distractors": "these, those, children, are"
+        },
+        {
+          "id": "fda31cdc-b094-42a9-b914-d127cad10e92",
+          "language": "en",
+          "question": "Do you see the toilet behind him?",
+          "answer": "Yes I do",
+          "distractors": "is, was, am, at"
+        }
+      ]
+    },
+    {
+      "id": "66dc53c7-60a9-4370-9ab6-fe42f75627a4",
+      "title": "OIG3 (3)",
+      "type": "image",
+      "media": "/lessons/media/66dc53c7-60a9-4370-9ab6-fe42f75627a4.jpg",
+      "questions": [
+        {
+          "id": "336e9e95-141b-4200-9ce9-e4f4482c20dc",
+          "language": "en",
+          "question": "What are the bride and groom doing?",
+          "answer": "They are getting married.",
+          "distractors": "these, those, is, was"
+        },
+        {
+          "id": "3574c6df-24ed-4075-9514-bf6cd1f1243c",
+          "language": "en",
+          "question": "Who is standing under the flower arch?",
+          "answer": "The bride and groom are standing under the flower arch.",
+          "distractors": "these, those, is, was"
+        },
+        {
+          "id": "390ed0b7-7cae-4cfd-8950-ca8142c38d0e",
+          "language": "en",
+          "question": "What are the bridesmaids holding?",
+          "answer": "The bridesmaids are holding flowers.",
+          "distractors": "these, those, is, was"
+        },
+        {
+          "id": "df412f23-df5a-4e92-be70-d229744ebb1b",
+          "language": "en",
+          "question": "What are the guests doing?",
+          "answer": "They are clapping their hands.",
+          "distractors": "these, those, is, was"
+        }
+      ]
+    },
+    {
+      "id": "722d3213-61d1-4ec7-91c0-762a0f46042e",
+      "title": "OIG2.NKu3c7UVEqG",
+      "type": "image",
+      "media": "/lessons/media/722d3213-61d1-4ec7-91c0-762a0f46042e.jpg",
+      "questions": [
+        {
+          "id": "39d462e8-0023-479b-bf05-1f32d2f565e2",
+          "language": "en",
+          "question": "What color is the girl's hair?",
+          "answer": "Her hair is red",
+          "distractors": "these, those, are, were"
+        },
+        {
+          "id": "3b175471-c266-4f1d-bd29-b7e7d8949f15",
+          "language": "en",
+          "question": "What is the girl sitting on?",
+          "answer": "The girl is sitting on a stool",
+          "distractors": "these, those, are, were"
+        },
+        {
+          "id": "6245c4b5-30e8-4054-b0c1-894b3ffbd897",
+          "language": "en",
+          "question": "What is the girl doing with the drumsticks?",
+          "answer": "The girl is playing the drums with the drumsticks",
+          "distractors": "these, those, are, were"
+        },
+        {
+          "id": "6ba815f2-bcd3-4747-abc7-289d0fa96145",
+          "language": "en",
+          "question": "What is this lady doing?",
+          "answer": "She is drumming",
+          "distractors": "he, are, was, us"
+        },
+        {
+          "id": "d6f75576-fb41-4b10-b037-de3c93e0712a",
+          "language": "en",
+          "question": "Is this lady crying?",
+          "answer": "No she is not crying",
+          "distractors": "are, you, sing"
+        }
+      ]
+    },
+    {
+      "id": "8a86dc6b-e67b-4e05-bfe9-4f8179311c09",
+      "title": "4db08bef 2019 4301 b846 25ab4cf8abd4",
+      "type": "image",
+      "media": "/lessons/media/8a86dc6b-e67b-4e05-bfe9-4f8179311c09.jpg",
+      "questions": [
+        {
+          "id": "65a5c697-8929-4430-a977-25988826c182",
+          "language": "en",
+          "question": "Where are the girls dancing?",
+          "answer": "The girls are dancing in a courtyard.",
+          "distractors": "inside, on, under, behind"
+        },
+        {
+          "id": "b71bf6b4-7534-4433-bf76-185fa1f87fb6",
+          "language": "en",
+          "question": "Which girl is spinning with her arm raised?",
+          "answer": "The girl in the front is spinning with her arm raised.",
+          "distractors": "these, those, on, at"
+        },
+        {
+          "id": "de8a4bb4-322e-4283-89fd-cc14a36d5871",
+          "language": "en",
+          "question": "What are the girls doing in the picture?",
+          "answer": "The girls are dancing in the picture.",
+          "distractors": "is, singing, these, those"
+        }
+      ]
+    },
+    {
+      "id": "901bf6a3-444b-43ca-bca6-6750bd6224d4",
+      "title": "OIG2 (4)",
+      "type": "image",
+      "media": "/lessons/media/901bf6a3-444b-43ca-bca6-6750bd6224d4.jpg",
+      "questions": [
+        {
+          "id": "7f59cb6c-4974-4b79-ab7b-a88931a772f1",
+          "language": "en",
+          "question": "What tool is he holding?",
+          "answer": "He is holding a hammer",
+          "distractors": "these, those, men, are"
+        },
+        {
+          "id": "a709be9a-1a64-4b96-b682-56c0e1481577",
+          "language": "en",
+          "question": "What is this man doing?",
+          "answer": "The man is building a roof",
+          "distractors": "these, those, men, are"
+        },
+        {
+          "id": "ae952296-5a32-4d2a-bff0-a7ae571d377e",
+          "language": "en",
+          "question": "Where is the man working?",
+          "answer": "The man is working on the house",
+          "distractors": "these, those, men, are"
+        },
+        {
+          "id": "cd236591-5fcc-4559-9d6f-07e2a41c9976",
+          "language": "en",
+          "question": "Is the man wearing socks on his hands?",
+          "answer": "No is wearing gloves on his hands",
+          "distractors": "these, those, men, are"
+        }
+      ]
+    },
+    {
+      "id": "91f2e5a1-f523-44d3-a11f-2516d0c1e98f",
+      "title": "5c4f2154 7fc9 4419 82de 5b152543f3f1",
+      "type": "image",
+      "media": "/lessons/media/91f2e5a1-f523-44d3-a11f-2516d0c1e98f.jpg",
+      "questions": [
+        {
+          "id": "7ef676e6-268d-4970-8780-4255cb2405ef",
+          "language": "en",
+          "question": "What is the baby holding?",
+          "answer": "The baby is holding a diaper.",
+          "distractors": "on, with, these, those"
+        },
+        {
+          "id": "86c94584-68e4-4a94-bb98-3205e76dbb84",
+          "language": "en",
+          "question": "Where is the baby?",
+          "answer": "The baby is in the bathroom.",
+          "distractors": "in, under, with, a"
+        },
+        {
+          "id": "bc6c3364-2858-4be7-9d5a-6471e710c11b",
+          "language": "en",
+          "question": "What is the baby doing?",
+          "answer": "He is going potty.",
+          "distractors": "she, they, come, it, driving"
+        },
+        {
+          "id": "cc874f10-46b7-41e9-b646-d2bce05b1f62",
+          "language": "en",
+          "question": "What is the baby sitting on?",
+          "answer": "The baby is sitting on a blue potty.",
+          "distractors": "in, under, with, these"
+        }
+      ]
+    },
+    {
+      "id": "935982ff-f753-432e-a278-1e74f522bddb",
+      "title": "8ce6b547 c9cb 4a64 a314 0d7c472db20a",
+      "type": "image",
+      "media": "/lessons/media/935982ff-f753-432e-a278-1e74f522bddb.jpg",
+      "questions": [
+        {
+          "id": "04f877d0-0878-48a2-b407-a09f83d57095",
+          "language": "en",
+          "question": "Is she old or young?",
+          "answer": "She is old.",
+          "distractors": "these, those, women, are, he"
+        },
+        {
+          "id": "5afb5fb8-d787-4294-81d2-dee3c3dc351d",
+          "language": "en",
+          "question": "What is the woman holding in her hand?",
+          "answer": "The woman is holding a cane.",
+          "distractors": "these, those, women, are"
+        },
+        {
+          "id": "7aad476e-02d6-49f4-85ec-44a3dcc231cf",
+          "language": "en",
+          "question": "Where is the woman walking?",
+          "answer": "She is walking on a sidewalk.",
+          "distractors": "these, those, women, are"
+        },
+        {
+          "id": "90cf2ca4-cb60-4e76-bf85-d8de581dca53",
+          "language": "en",
+          "question": "What colour is her hair?",
+          "answer": "Her hair is white.",
+          "distractors": "these, those, women, are, his, their, our"
+        }
+      ]
+    },
+    {
+      "id": "aa48c14d-bfa1-47fa-b6ba-e0741031f10a",
+      "title": "OIG1",
+      "type": "image",
+      "media": "/lessons/media/aa48c14d-bfa1-47fa-b6ba-e0741031f10a.jpg",
+      "questions": [
+        {
+          "id": "25b11996-9b39-4ff2-95da-347a2a2d5668",
+          "language": "en",
+          "question": "What is the woman wearing on her head?",
+          "answer": "The woman is wearing a yellow hard-hat on her head",
+          "distractors": "blue, red, these, those"
+        },
+        {
+          "id": "a79d1b60-a924-4aea-a6fe-2bccb9671275",
+          "language": "en",
+          "question": "What color is the woman's safety vest?",
+          "answer": "It is yellow",
+          "distractors": "blue, are, but, why"
+        },
+        {
+          "id": "ba0cc08f-1f34-4d5b-a228-d95f99c6b539",
+          "language": "en",
+          "question": "What is happening in this picture?",
+          "answer": "A woman is drinking from a bottle",
+          "distractors": "he, are, her, an, plate"
+        },
+        {
+          "id": "dd589edc-6aff-4f9e-a9c9-68ebc817fe32",
+          "language": "en",
+          "question": "What is the woman doing with the bottle?",
+          "answer": "She is drinking from the bottle",
+          "distractors": "eating, or, holding, are"
+        }
+      ]
+    },
+    {
+      "id": "aa8fd29e-79e5-414d-9ec0-985ebe18dd56",
+      "title": "5f5d972b f628 4106 8827 f034fe8f9f6a",
+      "type": "image",
+      "media": "/lessons/media/aa8fd29e-79e5-414d-9ec0-985ebe18dd56.jpg",
+      "questions": [
+        {
+          "id": "00d5783b-d03c-4477-90d2-b075bf16ecbe",
+          "language": "en",
+          "question": "What is the man wearing?",
+          "answer": "The man is wearing a blue shirt.",
+          "distractors": "these, those, men, are"
+        },
+        {
+          "id": "48c0225f-e1dc-4898-b37d-b719980eb3fd",
+          "language": "en",
+          "question": "What is the man holding in his hand?",
+          "answer": "The man is holding a white cup in his hand.",
+          "distractors": "blue, glass, book, these"
+        },
+        {
+          "id": "c931265a-0a11-40e1-9a7f-08fce6762a5c",
+          "language": "en",
+          "question": "Where is the man sitting?",
+          "answer": "The man is sitting outside in a garden.",
+          "distractors": "inside, kitchen, bedroom, car"
+        }
+      ]
+    },
+    {
+      "id": "ab0b9b8a-9413-4bf3-9c33-b9bb54d25dd8",
+      "title": "OIG3 (4)",
+      "type": "image",
+      "media": "/lessons/media/ab0b9b8a-9413-4bf3-9c33-b9bb54d25dd8.jpg",
+      "questions": [
+        {
+          "id": "2c7a5ab9-6c4e-4b2f-b470-a6cd787db415",
+          "language": "en",
+          "question": "Is it a sandy or a rocky beach?",
+          "answer": "It is a sandy beach",
+          "distractors": "these, those, are, were"
+        },
+        {
+          "id": "5aff1203-a891-4f38-a099-fdc63a83344e",
+          "language": "en",
+          "question": "Where is the boy playing?",
+          "answer": "The boy is playing on the beach.",
+          "distractors": "these, those, are, were"
+        },
+        {
+          "id": "a1a5b6ec-8035-4b95-9560-faa2d9d4e7d8",
+          "language": "en",
+          "question": "What is the boy on the beach doing?",
+          "answer": "The boy is digging a hole in the sand.",
+          "distractors": "these, those, are, were"
+        },
+        {
+          "id": "ae26da85-f516-4d09-a77c-3f0b0ee3ff57",
+          "language": "en",
+          "question": "What is the boy wearing?",
+          "answer": "The boy is wearing shorts",
+          "distractors": "these, those, are, were"
+        }
+      ]
+    },
+    {
+      "id": "acf3f206-8c78-4222-af25-8a68db39e991",
+      "title": "40d39291 2e34 45db 8001 0e913327bf21",
+      "type": "image",
+      "media": "/lessons/media/acf3f206-8c78-4222-af25-8a68db39e991.jpg",
+      "questions": [
+        {
+          "id": "62f4f5e2-5272-44cd-ad25-a15f9bd1caf9",
+          "language": "en",
+          "question": "Is the boy sad?",
+          "answer": "No, he is happy.",
+          "distractors": "was, come, stand"
+        },
+        {
+          "id": "7f609a3a-94a3-407e-a28b-c8ac2d95953f",
+          "language": "en",
+          "question": "Where is the boy sitting?",
+          "answer": "The boy is sitting on the grass.",
+          "distractors": "these, those, are, were"
+        },
+        {
+          "id": "a185d2e5-32e5-4242-baf3-c61e17735822",
+          "language": "en",
+          "question": "What is the boy doing in the grass?",
+          "answer": "The boy is playing on a phone.",
+          "distractors": "these, those, are, were"
+        },
+        {
+          "id": "f276a658-027a-488c-a5a7-dcbb5f8c531f",
+          "language": "en",
+          "question": "What color is the boy's shirt?",
+          "answer": "He is wearing a green shirt.",
+          "distractors": "these, those, are, were"
+        }
+      ]
+    },
+    {
+      "id": "b0a151fb-6d9a-4014-96dc-1594c8ded1d8",
+      "title": "324ab697 eaad 4136 8f79 a3c23e2e2802",
+      "type": "image",
+      "media": "/lessons/media/b0a151fb-6d9a-4014-96dc-1594c8ded1d8.jpg",
+      "questions": [
+        {
+          "id": "46681fed-a32a-441b-964c-dd78073d6c97",
+          "language": "en",
+          "question": "Where is the man driving the tractor?",
+          "answer": "He is driving the tractor in the field.",
+          "distractors": "by, under, at, these, at"
+        },
+        {
+          "id": "546c1c34-cf84-4b57-8542-4feca4ce7c8a",
+          "language": "en",
+          "question": "What is the man doing?",
+          "answer": "The man is driving the tractor.",
+          "distractors": "walking, eating, sleeping, jumping"
+        },
+        {
+          "id": "ce8b5d00-546f-402e-8e5c-a9a2704c410a",
+          "language": "en",
+          "question": "What is the man wearing on his head?",
+          "answer": "The man is wearing a straw hat on his head.",
+          "distractors": "boots, these, those, men"
+        }
+      ]
+    },
+    {
+      "id": "b3fe5624-525d-4097-b080-221f42134281",
+      "title": "OIG3 (1)",
+      "type": "image",
+      "media": "/lessons/media/b3fe5624-525d-4097-b080-221f42134281.jpg",
+      "questions": [
+        {
+          "id": "15167af7-1094-4340-89db-8535555f5920",
+          "language": "en",
+          "question": "What are the two children doing under the blanket?",
+          "answer": "The two children are lying under the blanket.",
+          "distractors": "child, is, sitting, these"
+        },
+        {
+          "id": "333c951a-730a-4af7-bbc7-e4c2ea70c533",
+          "language": "en",
+          "question": "Are the children boys or girls?",
+          "answer": "They are boys",
+          "distractors": "floor, table, chair, blanket"
+        },
+        {
+          "id": "d336587e-59c1-49a3-b34f-d3cc4d167eb1",
+          "language": "en",
+          "question": "Are the pillows soft or hard?",
+          "answer": "The pillows are soft",
+          "distractors": "they, not, these, those"
+        }
+      ]
+    },
+    {
+      "id": "b5c39370-ad3f-4148-ae92-55cd0cf0fab7",
+      "title": "OIG1.ddgRU",
+      "type": "image",
+      "media": "/lessons/media/b5c39370-ad3f-4148-ae92-55cd0cf0fab7.jpg",
+      "questions": [
+        {
+          "id": "1e1fbabc-3112-49bc-8f67-ec073b04ec7f",
+          "language": "en",
+          "question": "Where are the girls walking?",
+          "answer": "The girls are walking in a street.",
+          "distractors": "these, those, is, was"
+        },
+        {
+          "id": "32f523af-afb5-42f2-ae6a-e78ca5ae6063",
+          "language": "en",
+          "question": "What are the girls doing with their mouths?",
+          "answer": "They are laughing",
+          "distractors": "Those, were, is, or"
+        },
+        {
+          "id": "4a3be9f3-c717-4c4c-92b0-37dba6f8f54c",
+          "language": "en",
+          "question": "How many girls do you see?",
+          "answer": "I see two girls",
+          "distractors": "we, saw, me"
+        },
+        {
+          "id": "99d3c920-de77-4328-9694-df82c95adb3f",
+          "language": "en",
+          "question": "What are the girls holding in their hands?",
+          "answer": "The girls are holding books in their hands",
+          "distractors": "bags, phones, shoes, hats"
+        },
+        {
+          "id": "a2b1fe9b-c612-46d1-9ae1-df0be99152dd",
+          "language": "en",
+          "question": "Are these girls wearing dresses?",
+          "answer": "No they are wearing trousers",
+          "distractors": "yes, we, is, skirt"
+        }
+      ]
+    },
+    {
+      "id": "ba234944-024d-4d14-9708-193371743c2c",
+      "title": "OIG2 (3)",
+      "type": "image",
+      "media": "/lessons/media/ba234944-024d-4d14-9708-193371743c2c.jpg",
+      "questions": [
+        {
+          "id": "090c963c-b76c-4c9b-bc5e-865777a26fd1",
+          "language": "en",
+          "question": "What is the man wearing around his neck?",
+          "answer": "He is wearing a red scarf around his neck.",
+          "distractors": "these, those, men, are"
+        },
+        {
+          "id": "0c08541e-6086-4a79-b747-c2d547f57f81",
+          "language": "en",
+          "question": "What season is it?",
+          "answer": "It is autumn",
+          "distractors": "are, they, be"
+        },
+        {
+          "id": "23876c90-a31c-4b2c-abb1-3d16f88320f0",
+          "language": "en",
+          "question": "What is the dog doing?",
+          "answer": "The dog is walking on the sidewalk",
+          "distractors": "these, those, dogs, are"
+        },
+        {
+          "id": "95f53ff3-b39d-4647-9962-1f6c147b034a",
+          "language": "en",
+          "question": "Is that a little dog?",
+          "answer": "Yes it is a little dog",
+          "distractors": "big, cat, we, they, is, an"
+        },
+        {
+          "id": "bb5d4263-ccf7-40be-9a9a-16a822862e5d",
+          "language": "en",
+          "question": "Who is walking the dog?",
+          "answer": "The old man is walking the dog",
+          "distractors": "these, those, men, are"
+        },
+        {
+          "id": "cecfacd4-9ffc-4144-9078-138473c67e4d",
+          "language": "en",
+          "question": "Where is the man walking?",
+          "answer": "The man is walking on the sidewalk.",
+          "distractors": "these, those, men, are"
+        }
+      ]
+    },
+    {
+      "id": "bc65101e-2317-4301-a9d4-c968ba5ab77c",
+      "title": "OIG3 (2)",
+      "type": "image",
+      "media": "/lessons/media/bc65101e-2317-4301-a9d4-c968ba5ab77c.jpg",
+      "questions": [
+        {
+          "id": "0b6d21d0-acc9-473a-a825-ec485a9c1c38",
+          "language": "en",
+          "question": "What is she wearing?",
+          "answer": "She is wearing a dress",
+          "distractors": "arrow, these, those, women"
+        },
+        {
+          "id": "0fdcd9ec-c95b-4651-99c0-71aac7abfdce",
+          "language": "en",
+          "question": "Is her hair curly or straight?",
+          "answer": "Her hair is curly",
+          "distractors": "hat, these, those, women"
+        },
+        {
+          "id": "ccd9ec0a-53a4-4b6a-9542-477ef23718df",
+          "language": "en",
+          "question": "What colour is the lady's hair?",
+          "answer": "The lady's hair is red",
+          "distractors": "backward, these, those, women"
+        },
+        {
+          "id": "dc4b7f35-bcff-457b-9733-d0cd6b4a9220",
+          "language": "en",
+          "question": "What is the woman doing with the bow?",
+          "answer": "The woman is pulling the bowstring.",
+          "distractors": "these, those, women, are"
+        }
+      ]
+    },
+    {
+      "id": "d0175122-2fb3-4b70-b5e7-3a8335bd471b",
+      "title": "12ff2b8f 2cde 4ab2 9a7e b85691aea59a",
+      "type": "image",
+      "media": "/lessons/media/d0175122-2fb3-4b70-b5e7-3a8335bd471b.jpg",
+      "questions": [
+        {
+          "id": "0be836af-9738-4f03-b127-724e23810c77",
+          "language": "en",
+          "question": "What is the man wearing?",
+          "answer": "The man is wearing a black suit.",
+          "distractors": "these, those, men, are"
+        },
+        {
+          "id": "31a27a98-10aa-418b-9e95-f891102f9e87",
+          "language": "en",
+          "question": "What is happening?",
+          "answer": "The cake is falling down.",
+          "distractors": "these, those, men, are"
+        },
+        {
+          "id": "a264f002-9bde-49ad-82e0-5e1af660cc2a",
+          "language": "en",
+          "question": "Where is the cake falling?",
+          "answer": "The cake is falling on the table.",
+          "distractors": "these, those, are, were"
+        }
+      ]
+    },
+    {
+      "id": "d356060b-daeb-4b6b-93ad-bad4bb558cdc",
+      "title": "OIG3",
+      "type": "image",
+      "media": "/lessons/media/d356060b-daeb-4b6b-93ad-bad4bb558cdc.jpg",
+      "questions": [
+        {
+          "id": "48a420bb-81e9-434b-b168-44ff27d7c8b0",
+          "language": "en",
+          "question": "How many people are in the picture?",
+          "answer": "There are six people in the picture",
+          "distractors": "bed, those, were, will, on"
+        },
+        {
+          "id": "8f0ce46e-0d19-4ad7-8ecd-a3c8e876a043",
+          "language": "en",
+          "question": "Who is holding the camera?",
+          "answer": "A man is holding the camera.",
+          "distractors": "They, We, an, some"
+        },
+        {
+          "id": "98a9f2d0-3119-408e-9b09-59c88bd64f68",
+          "language": "en",
+          "question": "What is the girl in the orange sweater holding?",
+          "answer": "She is holding a tablet.",
+          "distractors": "is, they, he"
+        },
+        {
+          "id": "d5d34207-a98c-4236-bc26-be5a9ab87a8c",
+          "language": "en",
+          "question": "Where is the boy standing?",
+          "answer": "The boy is standing behind the girls.",
+          "distractors": "in, on, under, next"
+        }
+      ]
+    },
+    {
+      "id": "e15b2008-0949-481c-91ff-9e58ff32dd2a",
+      "title": "OIG2",
+      "type": "image",
+      "media": "/lessons/media/e15b2008-0949-481c-91ff-9e58ff32dd2a.jpg",
+      "questions": [
+        {
+          "id": "0fe58dea-2456-44e8-b124-a389152363b7",
+          "language": "en",
+          "question": "What is the girl doing?",
+          "answer": "The girl is putting her boots on.",
+          "distractors": "these, those, are, were"
+        },
+        {
+          "id": "7d0b7898-2259-40a4-825c-5c4cd2d052fa",
+          "language": "en",
+          "question": "Where is the girl sitting?",
+          "answer": "The girl is sitting near the door",
+          "distractors": "these, those, are, were"
+        },
+        {
+          "id": "f04a633a-4c01-44c6-8be8-22d829a499c2",
+          "language": "en",
+          "question": "What color is the girl's sweater?",
+          "answer": "Her sweater is pink",
+          "distractors": "these, those, are, were"
+        }
+      ]
+    },
+    {
+      "id": "e23602db-e4a8-48ee-a33a-941a9877c2c4",
+      "title": "5e32f0d2 a6df 43d1 a101 eef159f3782f",
+      "type": "image",
+      "media": "/lessons/media/e23602db-e4a8-48ee-a33a-941a9877c2c4.jpg",
+      "questions": [
+        {
+          "id": "0ff22bf6-0cb3-46a8-b371-9492e306c539",
+          "language": "en",
+          "question": "What is the baby doing?",
+          "answer": "The baby is sleeping.",
+          "distractors": "these, those, babies, are"
+        },
+        {
+          "id": "3aa618e8-6584-4bf0-814e-50574e778fbd",
+          "language": "en",
+          "question": "What is the man doing with the baby?",
+          "answer": "The man is holding the baby.",
+          "distractors": "these, those, men, are"
+        },
+        {
+          "id": "40e6bb6e-8f10-45aa-a05a-db21b0410e8a",
+          "language": "en",
+          "question": "Where is the man sitting?",
+          "answer": "The man is sitting on a couch.",
+          "distractors": "these, those, men, are"
+        }
+      ]
+    },
+    {
+      "id": "e803592a-6dda-44f2-b4dd-85e0a8912790",
+      "title": "OIG3.",
+      "type": "image",
+      "media": "/lessons/media/e803592a-6dda-44f2-b4dd-85e0a8912790.jpg",
+      "questions": [
+        {
+          "id": "5605a263-3233-4f64-92a6-811c22ae9241",
+          "language": "en",
+          "question": "What is the woman on?",
+          "answer": "The woman is sitting on the sand.",
+          "distractors": "these, those, women, are"
+        },
+        {
+          "id": "7b7491ec-1eb3-4494-a691-24794a746b44",
+          "language": "en",
+          "question": "What is lying next to the woman on the sand?",
+          "answer": "A straw hat is lying next to her.",
+          "distractors": "an, some, are, were"
+        },
+        {
+          "id": "e0b4e340-67ad-47cc-99f4-5c2f8aa6b033",
+          "language": "en",
+          "question": "What is the woman doing?",
+          "answer": "The woman is sitting on the beach.",
+          "distractors": "these, those, women, are"
+        },
+        {
+          "id": "e7d76576-0ffd-4780-9ff6-c96d006d2acd",
+          "language": "en",
+          "question": "What is the woman wearing?",
+          "answer": "The woman is wearing a white blouse and a blue skirt.",
+          "distractors": "these, those, women, are"
+        }
+      ]
+    },
+    {
+      "id": "f2ba6bee-5a2c-409e-8a5d-dcf023950303",
+      "title": "14d04c17 5735 488d a5c2 d33a9175d0d5",
+      "type": "image",
+      "media": "/lessons/media/f2ba6bee-5a2c-409e-8a5d-dcf023950303.jpeg",
+      "questions": [
+        {
+          "id": "100e5a9f-d2b1-41a1-b0f7-1badf23b65f4",
+          "language": "en",
+          "question": "Is the cat curled up or stretched out?",
+          "answer": "The cat is curled up.",
+          "distractors": "The cat is stretched out., The cat is standing., The cat is jumping."
+        },
+        {
+          "id": "26a254d7-76c7-4e14-a765-551aab1b5e16",
+          "language": "en",
+          "question": "Is the cat awake?",
+          "answer": "No, the cat is sleeping.",
+          "distractors": "Yes, the cat is awake., Yes, the cat is playing., No, the cat is eating."
+        },
+        {
+          "id": "2c2a6f25-5fb2-4a9e-b988-ff6390036b35",
+          "language": "en",
+          "question": "What color is the cat?",
+          "answer": "The cat is orange.",
+          "distractors": "The cat is black., The cat is white., The cat is gray."
+        },
+        {
+          "id": "72f01801-1366-4941-a1a7-d0a66107e97f",
+          "language": "en",
+          "question": "Which part of the cat is closest to the window?",
+          "answer": "The cat's head is closest to the window.",
+          "distractors": "The cat's tail is closest to the window., The cat's back is closest to the window., The cat's paws are closest to the window."
+        },
+        {
+          "id": "87d93c30-d451-40b6-af71-cef4f84b1d1a",
+          "language": "en",
+          "question": "What is shining on the cat?",
+          "answer": "Sunlight is shining on the cat.",
+          "distractors": "Moonlight is shining on the cat., Lamp light is shining on the cat., Flashlight is shining on the cat."
+        },
+        {
+          "id": "b56348d8-0fcf-4bc1-8a26-760834bec277",
+          "language": "en",
+          "question": "What is the cat doing?",
+          "answer": "The cat is sleeping.",
+          "distractors": "The cat is eating., The cat is running., The cat is jumping."
+        },
+        {
+          "id": "f2ca2e58-5fa2-4b66-9018-d82cc291dd24",
+          "language": "en",
+          "question": "Where is the cat sleeping?",
+          "answer": "The cat is sleeping on the windowsill.",
+          "distractors": "The cat is sleeping on the floor., The cat is sleeping on the bed., The cat is sleeping on the chair."
+        },
+        {
+          "id": "fa63121c-d832-494c-8385-9d575792b9d9",
+          "language": "en",
+          "question": "What is near the cat's nose?",
+          "answer": "The cat's paw is near its nose.",
+          "distractors": "The cat's tail is near its nose., The cat's ear is near its nose., The cat's whiskers are near its nose."
+        }
+      ]
+    }
+  ]
+}
