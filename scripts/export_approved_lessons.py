@@ -23,10 +23,15 @@ def request(path, *, binary=False):
             'Authorization': 'Bearer ' + KEY
         },
     )
-    with urllib.request.urlopen(req, timeout=90) as response:
-        body = response.read()
-        return body if binary else json.loads(body)
-
+       try:
+        with urllib.request.urlopen(req, timeout=90) as response:
+            body = response.read()
+            return body if binary else json.loads(body)
+    except urllib.error.HTTPError as exc:
+        print("Failed endpoint:", path.split('?')[0])
+        print("HTTP status:", exc.code)
+        print("Reason:", exc.reason)
+        raise
 
 def fetch_all(table, select, filters):
     results = []
