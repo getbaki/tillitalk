@@ -121,6 +121,32 @@ const tryAgainMessages = [
 
 function newQuestion(){return {id:id(),question:'',answer:'',distractors:''};}
 function makePlan(items){const queues=shuffle(items.filter(x=>x.questions?.some(q=>q.question.trim()&&q.answer.trim()))).map(item=>({item,questions:shuffle(item.questions.filter(q=>q.question.trim()&&q.answer.trim()))}));const plan=[];while(queues.some(x=>x.questions.length)){for(const q of queues){const count=Math.min(q.questions.length,Math.random()<.5?1:2);for(let i=0;i<count;i++)plan.push({mediaId:q.item.id,question:q.questions.shift()});}}return plan;}
+// Temporary daily timer test. Restore 60 and 5 after testing.
+const DAILY_MINUTES = 2;
+const WARNING_MINUTES = 0.5;
+const DAILY_KEY = 'tillitalk-daily-learning-test-v1';
+function localDay(){const d=new Date();return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;}
+function dailyRecord(child){const r=readSaved(DAILY_KEY,{})[child];return r?.day===localDay()?r:{day:localDay(),used:0,extra:0};}
+function saveDaily(child,r){const all=readSaved(DAILY_KEY,{});all[child]=r;localStorage.setItem(DAILY_KEY,JSON.stringify(all));}
+function remainingDaily(r){return Math.max(0,DAILY_MINUTES*60000+r.extra-r.used);}
+// Silent analogue countdown, driven by the existing daily allowance.
+function DailyClock({remaining, allowance}){
+  const fraction=Math.max(0,Math.min(1,remaining/Math.max(1,allowance)));
+  const seconds=Math.ceil(remaining/1000);
+  const label=`${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')}`;
+  const color=remaining<=WARNING_MINUTES*60000?'#e46d66':fraction<=0.25?'#efb94d':'#83c99a';
+  return <div role="img" aria-label={`${Math.floor(seconds/60)} minutes ${seconds%60} seconds of learning time left today`} style={{display:'inline-flex',flexDirection:'column',alignItems:'center',flexShrink:0,lineHeight:1,gap:2,color:'#7952a3'}}>
+    <svg aria-hidden="true" viewBox="0 0 100 100" style={{width:48,height:48,display:'block'}}>
+      <circle cx="50" cy="50" r="46" fill="white" stroke="#7952a3" strokeWidth="3"/>
+      <circle cx="50" cy="50" r="34" fill="none" stroke="#eee3fa" strokeWidth="12"/>
+      <circle cx="50" cy="50" r="34" fill="none" stroke={color} strokeWidth="12" strokeDasharray={`${fraction*2*Math.PI*34} ${2*Math.PI*34}`} transform="rotate(-90 50 50)" style={{transition:'stroke-dasharray 0.4s linear'}}/>
+      {Array.from({length:12},(_,i)=><line key={i} x1="50" y1="7" x2="50" y2={i%3===0?15:11} stroke="#7952a3" strokeWidth="2" transform={`rotate(${i*30} 50 50)`}/>)}
+      <line x1="50" y1="50" x2="50" y2="22" stroke="#7952a3" strokeWidth="3" strokeLinecap="round" transform={`rotate(${fraction*360} 50 50)`}/>
+      <circle cx="50" cy="50" r="4" fill="#7952a3"/>
+    </svg>
+    <span aria-hidden="true" style={{fontSize:11,fontWeight:700,fontVariantNumeric:'tabular-nums',whiteSpace:'nowrap'}}>{label} left</span>
+  </div>;
+}
 const PROFILES_KEY = 'tillitalk-child-profiles-v1';
 const PROGRESS_KEY = 'tillitalk-child-progress-v1';
 const AVATARS = ['🦊','🐻','🐰','🦁','🐼','🐸','🐨','🦋'];
@@ -158,7 +184,8 @@ export default function App(){
   const [learnerLanguage,setLearnerLanguage]=useState('en');
   const [voiceMuted, setVoiceMuted] = useState(() => localStorage.getItem('tillitalk-voice-muted') === 'true');
   const [voiceVolume, setVoiceVolume] = useState(() => {
-    const saved = Number(localStorage.getItem('tillitalk-voice-volume'));
+    const raw = localStorage.getItem('tillitalk-voice-volume');
+    const saved = raw === null ? 1 : Number(raw);
     return Number.isFinite(saved) && saved >= 0 && saved <= 1 ? saved : 1;
   });
   function speak(text, language = learnerLanguage) {
@@ -254,13 +281,15 @@ const languages = [
   
   const [correctCount, setCorrectCount] = useState(0);
   const [celebration, setCelebration] = useState('');
+  useEffect(()=>{setCorrectCount(0);setCelebration('');},[activeChildId]);
+  useEffect(()=>{if(page!=='play')setCelebration('');},[page]);
   
 useEffect(() => {
   if (!celebration) return;
 
   const timer = setTimeout(() => {
     setCelebration('');
-  }, celebration === 'band' ? 6700 : 5000);
+  }, celebration === 'fox' ? 32000 : celebration === 'band' ? 17000 : celebration === 'streamers' ? 8000 : 5000);
 
   return () => clearTimeout(timer);
 }, [celebration]);
@@ -605,6 +634,36 @@ useEffect(() => {
   const answerWords=current?.question.answer.trim().split(/\s+/).filter(Boolean)||[];
   const correct=checked&&picked.length===answerWords.length&&picked.every((x,i)=>x.word===answerWords[i]);
   useEffect(() => { setHintVisible(false);setUsedHint(false);setFirstAttemptMade(false); }, [step, plan]);
+  const [daily,setDaily]=useState(()=>dailyRecord(activeChildId));
+  const [breakAnswer,setBreakAnswer]=useState('');
+  const [breakGate,setBreakGate]=useState(()=>({a:12+Math.floor(Math.random()*8),b:7+Math.floor(Math.random()*8)}));
+  const [breakUnlocked,setBreakUnlocked]=useState(false);
+  const [showSound,setShowSound]=useState(false);
+  const remaining=remainingDaily(dailyRecord(activeChildId));
+  const dailyBlocked=!!activeChildId && remaining===0;
+  useEffect(()=>{
+    setDaily(dailyRecord(activeChildId));setBreakUnlocked(false);setBreakAnswer('');
+    setBreakGate({a:12+Math.floor(Math.random()*8),b:7+Math.floor(Math.random()*8)});
+  },[activeChildId]);
+  useEffect(()=>{
+    if(!activeChildId)return;
+    let last=performance.now();
+    let running=page==='play' && !!current && !parentMilestone && !document.hidden;
+    function tick(){
+      const now=performance.now();const elapsed=Math.max(0,now-last);last=now;
+      const r=dailyRecord(activeChildId);
+      if(running && remainingDaily(r)>0){r.used+=Math.min(elapsed,remainingDaily(r));saveDaily(activeChildId,r);}
+      setDaily(r);
+      running=page==='play' && !!current && !parentMilestone && !document.hidden;
+    }
+    const timer=setInterval(tick,1000);
+    document.addEventListener('visibilitychange',tick);window.addEventListener('pagehide',tick);
+    return ()=>{clearInterval(timer);document.removeEventListener('visibilitychange',tick);window.removeEventListener('pagehide',tick);tick();};
+  },[activeChildId,page,!!current,parentMilestone]);
+  useEffect(()=>{
+    if(dailyBlocked && page==='play'){window.speechSynthesis?.cancel();setCelebration('');setHintVisible(false);setPage('break');}
+  },[dailyBlocked,page]);
+  function allowExtra(){const r=dailyRecord(activeChildId);r.extra+=15*60000;saveDaily(activeChildId,r);setDaily(r);setBreakUnlocked(false);setBreakAnswer('');setBreakGate({a:12+Math.floor(Math.random()*8),b:7+Math.floor(Math.random()*8)});setPage('home');}
   const stats=levelStats(plan,childOutcomes);
   // Real mastery: every unique question attempted, with at least 85% correct on first attempt.
   // milestone85Seen is separate from the earlier 5% test flag, so testers can verify it.
@@ -621,11 +680,11 @@ useEffect(() => {
     const timer = setTimeout(() => setHintVisible(false), 5000);
     return () => clearTimeout(timer);
   }, [hintVisible, step, plan]);
-  async function start(){if(!activeChildId){setPage('profiles');return;}const lessons=await loadPublishedLessons()||[];const p=makePlan([...sample,...library,...lessons]);setPlan(p);setStep(0);setPicked([]);setChecked(false);resetQuestionState();setWordOrder([]);setPage('play');}
+  async function start(){if(!activeChildId){setPage('profiles');return;}if(remainingDaily(dailyRecord(activeChildId))===0){setPage('break');return;}const lessons=await loadPublishedLessons()||[];const p=makePlan([...sample,...library,...lessons]);setPlan(p);setStep(0);setPicked([]);setChecked(false);resetQuestionState();setWordOrder([]);setPage('play');}
   useEffect(()=>{if(!current)return;const words=current.question.answer.trim().split(/\s+/).filter(Boolean).map((word,i)=>({id:`a${i}`,word}));const extra=current.question.distractors.split(',').map(x=>x.trim()).filter(Boolean).map((word,i)=>({id:`e${i}`,word}));setWordOrder(shuffle([...words,...extra]));},[step,plan]);
   
 useEffect(() => {
-  if (page !== 'play' || !current) return;
+  if (page !== 'play' || !current || dailyBlocked || parentMilestone) return;
 
   const timer = setTimeout(() => {
     speak(current.question.question, learnerLanguage);
@@ -635,7 +694,7 @@ useEffect(() => {
     clearTimeout(timer);
     window.speechSynthesis?.cancel();
   };
-}, [page, step, plan, learnerLanguage]);
+}, [page, step, plan, learnerLanguage, dailyBlocked, parentMilestone]);
 
   function openEditor(item){setEditing(item?.id||null);setDraft(item?{...item,questions:item.questions.map(q=>({...q}))}:{id:id(),title:'',type:'image',questions:[newQuestion()]});setFile(null);setError('');setPage('edit');}
   function updateQuestion(qid,field,value){setDraft(d=>({...d,questions:d.questions.map(q=>q.id===qid?{...q,[field]:value}:q)}));}
@@ -644,7 +703,7 @@ useEffect(() => {
   const count=all.reduce((sum,x)=>sum+x.questions.length,0);
  
 return <div className="app">
-  {page === 'play' && celebration === 'streamers' && (
+  {page === 'play' && celebration === 'streamers-fallback' && (
     <div className="streamer-celebration" aria-label="Celebration!" role="status">
       <span>🎊</span>
       <span>🎉</span>
@@ -656,15 +715,10 @@ return <div className="app">
   )}
 
  
-{page === 'play' && celebration === 'band' && (
-  <div className="tilli-parade" role="status" aria-label="Hooray! The animal marching band is passing by!">
-    <div className="tilli-parade-march" aria-hidden="true">
-      <span className="tilli-parade-animal" style={{animationDelay:'0s'}}>🐘<small>🥁</small></span>
-      <span className="tilli-parade-animal" style={{animationDelay:'.13s'}}>🦁<small>🎺</small></span>
-      <span className="tilli-parade-animal" style={{animationDelay:'.26s'}}>🦒<small>🥁</small></span>
-      <span className="tilli-parade-animal" style={{animationDelay:'.39s'}}>🐒<small>🚩</small></span>
-      <span className="tilli-parade-animal" style={{animationDelay:'.52s'}}>🐻<small>🎶</small></span>
-    </div>
+{page === 'play' && (['band','fox','streamers'].includes(celebration)) && (
+  <div role="status" aria-label={celebration === 'fox' ? 'Tilly dances for you!' : celebration === 'band' ? 'Hooray! The animal marching band!' : 'Hooray! You are a star!'} style={{position:'fixed',inset:0,zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',pointerEvents:'auto',background:'transparent'}}>
+    <video key={celebration} src={celebration === 'fox' ? '/TilliTalk-fox-transparent.webm' : celebration === 'band' ? '/TilliTalk-Parade-Transparent.webm' : '/TilliTalk-Streamers-Transparent.webm'} autoPlay muted playsInline onEnded={()=>setCelebration('')} onError={()=>setCelebration('streamers-fallback')} style={{width:celebration === 'fox' ? 'min(65vw, 480px)' : 'min(95vw, 960px)',maxHeight:'80vh',objectFit:'contain',pointerEvents:'none'}} />
+    <button type="button" onClick={()=>setCelebration('')} style={{position:'absolute',right:16,bottom:16}}>Continue ➜</button>
   </div>
 )}
 
@@ -678,7 +732,9 @@ return <div className="app">
       style={{height:'64px',width:'auto',maxWidth:'100%',objectFit:'contain'}}
     />
   </button>
+ <span style={{background:"#eee3fa",color:"#7952a3",borderRadius:20,padding:"5px 10px",fontWeight:700,fontSize:14,whiteSpace:"nowrap"}}>Level 1</span>
  <nav>
+  {activeChild && ['home','play','break'].includes(page) && <DailyClock remaining={remaining} allowance={DAILY_MINUTES*60000+dailyRecord(activeChildId).extra}/>}
   <button onClick={()=>setPage('home')}>Home</button>
   <button hidden onClick={()=>setPage('admin')}>Pictures & Admin</button>
 </nav>
@@ -699,23 +755,27 @@ return <div className="app">
         <button type="button" onClick={()=>setPage('home')}>Back home</button>
       </section>}
       {page==='home'&&<section className="hero"><div className="hero-emoji">🐶 💬 🌟</div><h1>Let's talk!</h1><p>Look, listen, and make sentences with words.</p><div className="language-picker"><label>Learning language <select value={learnerLanguage} onChange={e=>setLearnerLanguage(e.target.value)}>{languages.map(([code,name])=><option key={code} value={code}>{name}</option>)}</select></label></div><div style={{margin:'14px 0'}}><button type="button" onClick={()=>setPage('profiles')}>{activeChild?`${activeChild.avatar} ${activeChild.name} · Switch child`:'🐻 Choose or add a child'}</button></div><button className="primary big" disabled={publicLoading} onClick={start}>{publicLoading?'Loading lessons…':'▶ Start learning'}</button><p className="muted">{all.length} pictures & videos · {count} questions</p>{publicError&&<p className="hint" role="status">{publicError}</p>}<div className="hint">Questions switch pictures after 1–2 turns, then revisit earlier pictures.</div></section>}
-      {page === 'play' && (
+      {page==='break'&&<section className="hero" style={{maxWidth:580,margin:'auto'}}>
+        <div className="hero-emoji">🦊 🌙 ⭐</div><h1>Time for a little break!</h1>
+        <p>Wonderful learning today! Rest your eyes and stretch your legs.</p><p>⭐ Your learning progress is saved.</p>
+        {!dailyBlocked?<button className="primary" onClick={()=>setPage('home')}>Back to learning</button>:<>
+          <p>Come back tomorrow, or ask a grown-up.</p>
+          {!breakUnlocked?<form onSubmit={e=>{e.preventDefault();if(Number(breakAnswer)===breakGate.a+breakGate.b)setBreakUnlocked(true);else setBreakAnswer('');}}>
+            <label>Grown-ups only 🔒 What is {breakGate.a} + {breakGate.b}?<input type="number" value={breakAnswer} onChange={e=>setBreakAnswer(e.target.value)}/></label><button type="submit">Continue</button>
+          </form>:<button className="primary" onClick={allowExtra}>Allow 15 extra minutes</button>}
+        </>}
+        <button onClick={()=>{setBreakUnlocked(false);setBreakAnswer('');setPage('home');}}>Home</button>
+      </section>}
+      {page === 'play' && !dailyBlocked && (
         <section className="play-area">
-          <div aria-label="Voice controls" style={{display:'flex',alignItems:'center',gap:'12px',flexWrap:'wrap',justifyContent:'flex-end',padding:'8px 0 16px'}}>
-            <button type="button" onClick={toggleMute} aria-label={voiceMuted ? 'Unmute voice' : 'Mute voice'} aria-pressed={voiceMuted} style={{padding:'9px 14px',borderRadius:'12px'}}>
-              {voiceMuted ? '🔇 Unmute' : '🔊 Mute'}
-            </button>
-            <label htmlFor="voice-volume" style={{display:'flex',alignItems:'center',gap:'9px'}}>
-              Volume
-              <input id="voice-volume" type="range" min="0" max="100" step="5" value={Math.round(voiceVolume * 100)} onChange={e => {
-                const next = Number(e.target.value) / 100;
-                setVoiceVolume(next);
-                if (next === 0) window.speechSynthesis?.cancel();
-              }} aria-label="Voice volume" style={{width:'110px'}} />
-              <span style={{minWidth:'40px'}}>{Math.round(voiceVolume * 100)}%</span>
-            </label>
+          <div style={{display:'flex',justifyContent:'flex-end',gap:8}}>
+            <button type="button" aria-label="Sound settings" aria-expanded={showSound} onClick={()=>setShowSound(v=>!v)}>{voiceMuted?'🔇':'🔊'}</button>
           </div>
-          {activeChild&&<p className="muted">{activeChild.avatar} {activeChild.name} · Level 1 progress: {stats.attempted}/{stats.total} attempted · {stats.percent}% first-try correct</p>}
+          {showSound&&<div style={{display:'flex',gap:10,alignItems:'center',justifyContent:'flex-end',flexWrap:'wrap'}}>
+            <button onClick={toggleMute}>{voiceMuted?'Unmute':'Mute'}</button>
+            <label>Volume <input type="range" min="0" max="100" step="5" value={Math.round(voiceVolume*100)} onChange={e=>{const v=Number(e.target.value)/100;setVoiceVolume(v);if(!v)window.speechSynthesis?.cancel();}}/></label>
+          </div>}
+          {remaining>0&&remaining<=WARNING_MINUTES*60000&&<p className="hint" role="status">🌙 Almost time for a little break!</p>}
           {parentMilestone ? (
             <div className="hero" role="dialog" aria-modal="true" aria-label="Grown-up time">
               <h1>🌟 Wonderful learning!</h1>
@@ -739,26 +799,19 @@ return <div className="app">
             </div>
           ) : (
             <>
-              <div className="progress">
-                <span>Question {step + 1} of {plan.length}</span>
-                <div className="progress-track">
-                  <div style={{ width: `${(step / plan.length) * 100}%` }} />
-                </div>
-              </div>
               <div className="play-card">
                 <Media item={currentItem} src={srcFor(currentItem)} />
                 <div className="question-line">
                   <h2>{current.question.question}</h2>
                   <button aria-label="Hear question" className="sound" onClick={() => speak(current.question.question, learnerLanguage)}>🔊</button>
                 </div>
-                <p className="muted">Tap the words in the right order.</p>
-                <div className="answer-zone">
+                <div className="answer-zone" aria-label="Your answer" style={{minHeight:48}}>
                   {picked.length ? picked.map(x => (
                     <button key={x.id} className="word selected" onClick={() => {
                       setPicked(p => p.filter(w => w.id !== x.id));
                       setChecked(false);
                     }}>{x.word}</button>
-                  )) : <span className="muted">Your sentence goes here…</span>}
+                  )) : null}
                 </div>
                 <div className="word-bank">
                   {wordOrder.filter(x => !picked.some(p => p.id === x.id)).map(x => (
@@ -805,7 +858,8 @@ return <div className="app">
                       if (isCorrect) {
                         const nextCount = correctCount + 1;
                         setCorrectCount(nextCount);
-                        if (nextCount % 9 === 0) setCelebration('band');
+                        if (nextCount % 27 === 0) setCelebration('fox');
+                        else if (nextCount % 9 === 0) setCelebration('band');
                         else if (nextCount % 3 === 0) setCelebration('streamers');
                         speak(current.question.answer, learnerLanguage);
                       }
