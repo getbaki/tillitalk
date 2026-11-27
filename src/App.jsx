@@ -709,7 +709,22 @@ useEffect(() => {
   function updateQuestion(qid,field,value){setDraft(d=>({...d,questions:d.questions.map(q=>q.id===qid?{...q,[field]:value}:q)}));}
   async function save(){if(!draft.title.trim()){setError('Please give this picture or video a title.');return;}if(!draft.questions.length||draft.questions.some(q=>!q.question.trim()||!q.answer.trim())){setError('Every question needs both a question and a correct answer.');return;}if(!editing&&!file){setError('Please choose a picture or video.');return;}try{if(file)await dbPut(draft.id,file);const entry={id:draft.id,title:draft.title.trim(),type:file?(file.type.startsWith('video/')?'video':'image'):draft.type,questions:draft.questions,url:undefined};setLibrary(old=>[...old.filter(x=>x.id!==entry.id),entry]);setPage('admin');setError('');}catch(e){setError('Could not save this file. Your browser storage may be full. Try a smaller video.');}}
   async function remove(item){if(!window.confirm(`Delete “${item.title}” and all its questions?`))return;try{await dbDelete(item.id);}catch{}setLibrary(x=>x.filter(y=>y.id!==item.id));}
-  useEffect(()=>{if(!intro)return;const t=setTimeout(()=>setIntro(false),8000);return()=>clearTimeout(t);},[intro]);
+  useEffect(()=>{
+    if(!intro)return;
+    const video=introRef.current;
+    let active=true;
+    const previousOverflow=document.body.style.overflow;
+    document.body.style.overflow='hidden';
+    const t=setTimeout(()=>setIntro(false),12000);
+    if(video){
+      video.play().catch(()=>{
+        if(!active)return;
+        video.muted=true;
+        video.play().catch(()=>{if(active)setIntro(false);});
+      });
+    }
+    return()=>{active=false;clearTimeout(t);document.body.style.overflow=previousOverflow;};
+  },[intro]);
   useEffect(()=>{localStorage.setItem('tillitalk-music',musicOn?'on':'off');},[musicOn]);
   useEffect(()=>{
     const audio=musicRef.current;
@@ -733,8 +748,6 @@ return <div className="app">
   <audio ref={musicRef} src="/TilliTalk-Woodland-Loop.ogg" loop preload="auto" />
   {intro&&<div className="tt-intro" role="dialog" aria-label="Welcome to TilliTalk">
     <video ref={introRef} src="/TilliTalk-Golden-Intro.mp4" autoPlay playsInline onEnded={()=>setIntro(false)} onError={()=>setIntro(false)} />
-    <button className="tt-intro-skip" onClick={()=>setIntro(false)}>Continue ➜</button>
-    <button className="tt-intro-play" onClick={()=>introRef.current?.play().catch(()=>setIntro(false))}>▶ Play introduction</button>
   </div>}
   {page==='play'&&stars>0&&!parentMilestone&&<video key={stars} className="tt-star-sprinkles" src="/TilliTalk-Star-Sprinkles.webm" autoPlay muted playsInline aria-hidden="true" onEnded={()=>setStars(0)} onError={()=>setStars(0)} />}
 
