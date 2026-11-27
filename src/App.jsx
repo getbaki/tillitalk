@@ -170,6 +170,11 @@ function levelStats(plan, outcomes){
 
 function Media({item,src}){if(!src)return <div className="media-placeholder">🖼️ Add a picture or video</div>;return item.type==='video'?<video key={src} src={src} controls playsInline preload="metadata" className="lesson-media"/>:<img className="lesson-media" src={src} alt={item.title}/>;}
 export default function App(){
+  const [intro,setIntro]=useState(true);
+  const introRef=useRef(null);
+  const musicRef=useRef(null);
+  const [musicOn,setMusicOn]=useState(()=>localStorage.getItem('tillitalk-music')!=='off');
+  const [stars,setStars]=useState(0);
   const [library,setLibrary]=useState(loadLibrary);
   const [session,setSession]=useState(null);
   const [adminAllowed,setAdminAllowed]=useState(false);
@@ -704,10 +709,35 @@ useEffect(() => {
   function updateQuestion(qid,field,value){setDraft(d=>({...d,questions:d.questions.map(q=>q.id===qid?{...q,[field]:value}:q)}));}
   async function save(){if(!draft.title.trim()){setError('Please give this picture or video a title.');return;}if(!draft.questions.length||draft.questions.some(q=>!q.question.trim()||!q.answer.trim())){setError('Every question needs both a question and a correct answer.');return;}if(!editing&&!file){setError('Please choose a picture or video.');return;}try{if(file)await dbPut(draft.id,file);const entry={id:draft.id,title:draft.title.trim(),type:file?(file.type.startsWith('video/')?'video':'image'):draft.type,questions:draft.questions,url:undefined};setLibrary(old=>[...old.filter(x=>x.id!==entry.id),entry]);setPage('admin');setError('');}catch(e){setError('Could not save this file. Your browser storage may be full. Try a smaller video.');}}
   async function remove(item){if(!window.confirm(`Delete “${item.title}” and all its questions?`))return;try{await dbDelete(item.id);}catch{}setLibrary(x=>x.filter(y=>y.id!==item.id));}
+  useEffect(()=>{if(!intro)return;const t=setTimeout(()=>setIntro(false),8000);return()=>clearTimeout(t);},[intro]);
+  useEffect(()=>{localStorage.setItem('tillitalk-music',musicOn?'on':'off');},[musicOn]);
+  useEffect(()=>{
+    const audio=musicRef.current;
+    if(!audio)return;
+    const allowed=()=>musicOn&&!intro&&!document.hidden&&['home','profiles','play'].includes(page)&&!parentMilestone&&!dailyBlocked;
+    const update=()=>{if(!allowed()){audio.pause();return;}audio.play().catch(()=>{});};
+    const tick=setInterval(()=>{
+      const speaking=window.speechSynthesis?.speaking||window.speechSynthesis?.pending;
+      const target=page==='play'?(speaking?0.025:0.09):0.20;
+      audio.volume=Math.max(0,Math.min(1,audio.volume+(target-audio.volume)*0.22));
+    },80);
+    update();document.addEventListener('visibilitychange',update);document.addEventListener('pointerdown',update);
+    return()=>{clearInterval(tick);document.removeEventListener('visibilitychange',update);document.removeEventListener('pointerdown',update);audio.pause();};
+  },[intro,musicOn,page,parentMilestone,dailyBlocked]);
+  useEffect(()=>{if(!stars)return;const t=setTimeout(()=>setStars(0),3000);return()=>clearTimeout(t);},[stars]);
+  useEffect(()=>{setStars(0);},[page,step,activeChildId]);
   const approvedMedia=cloudMedia.filter(m=>m.is_published && approvedCounts?.[m.id]>0);
   const approvedTotal=approvedMedia.reduce((sum,m)=>sum+approvedCounts[m.id],0);
  
 return <div className="app">
+  <audio ref={musicRef} src="/TilliTalk-Woodland-Loop.ogg" loop preload="auto" />
+  {intro&&<div className="tt-intro" role="dialog" aria-label="Welcome to TilliTalk">
+    <video ref={introRef} src="/TilliTalk-Golden-Intro.mp4" autoPlay playsInline onEnded={()=>setIntro(false)} onError={()=>setIntro(false)} />
+    <button className="tt-intro-skip" onClick={()=>setIntro(false)}>Continue ➜</button>
+    <button className="tt-intro-play" onClick={()=>introRef.current?.play().catch(()=>setIntro(false))}>▶ Play introduction</button>
+  </div>}
+  {page==='play'&&stars>0&&!parentMilestone&&<video key={stars} className="tt-star-sprinkles" src="/TilliTalk-Star-Sprinkles.webm" autoPlay muted playsInline aria-hidden="true" onEnded={()=>setStars(0)} onError={()=>setStars(0)} />}
+
   {page === 'play' && celebration === 'streamers-fallback' && (
     <div className="streamer-celebration" aria-label="Celebration!" role="status">
       <span>🎊</span>
@@ -741,6 +771,7 @@ return <div className="app">
  <nav>
   {activeChild && ['home','play','break'].includes(page) && <DailyClock remaining={remaining} allowance={DAILY_MINUTES*60000+dailyRecord(activeChildId).extra}/>}
   <button onClick={()=>setPage('home')}>Home</button>
+  <button aria-label={musicOn?'Turn music off':'Turn music on'} aria-pressed={musicOn} onClick={()=>setMusicOn(v=>!v)}>{musicOn?'🎵':'🔇'}</button>
   <button hidden onClick={()=>setPage('admin')}>Pictures & Admin</button>
 </nav>
 </header>
@@ -863,6 +894,7 @@ return <div className="app">
                       if (isCorrect) {
                         const nextCount = correctCount + 1;
                         setCorrectCount(nextCount);
+                        setStars(Date.now());
                         if (nextCount % 27 === 0) setCelebration('fox');
                         else if (nextCount % 9 === 0) setCelebration('band');
                         else if (nextCount % 3 === 0) setCelebration('streamers');
