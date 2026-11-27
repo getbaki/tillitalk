@@ -716,29 +716,42 @@ useEffect(() => {
     const previousOverflow=document.body.style.overflow;
     document.body.style.overflow='hidden';
     const t=setTimeout(()=>setIntro(false),12000);
+    const unlockIntro=()=>{
+      if(!active||!video||!musicOn)return;
+      video.muted=false;
+      video.play().catch(()=>{if(active){video.muted=true;video.play().catch(()=>{});}});
+    };
+    document.addEventListener('click',unlockIntro,true);
+    document.addEventListener('keydown',unlockIntro,true);
     if(video){
+      video.muted=!musicOn;
       video.play().catch(()=>{
         if(!active)return;
         video.muted=true;
         video.play().catch(()=>{if(active)setIntro(false);});
       });
     }
-    return()=>{active=false;clearTimeout(t);document.body.style.overflow=previousOverflow;};
+    return()=>{active=false;clearTimeout(t);document.removeEventListener('click',unlockIntro,true);document.removeEventListener('keydown',unlockIntro,true);document.body.style.overflow=previousOverflow;};
   },[intro]);
   useEffect(()=>{localStorage.setItem('tillitalk-music',musicOn?'on':'off');},[musicOn]);
   useEffect(()=>{
     const audio=musicRef.current;
     if(!audio)return;
     const allowed=()=>musicOn&&!intro&&!document.hidden&&['home','profiles','play'].includes(page)&&!parentMilestone&&!dailyBlocked;
-    const update=()=>{if(!allowed()){audio.pause();return;}audio.play().catch(()=>{});};
+    const targetVolume=()=>page==='play'?((window.speechSynthesis?.speaking||window.speechSynthesis?.pending)?0.025:0.09):0.20;
+    if(audio.paused)audio.volume=targetVolume();
+    const update=()=>{if(!allowed()){audio.pause();return;}if(audio.paused)audio.play().catch(()=>{});};
     const tick=setInterval(()=>{
-      const speaking=window.speechSynthesis?.speaking||window.speechSynthesis?.pending;
-      const target=page==='play'?(speaking?0.025:0.09):0.20;
+      const target=targetVolume();
       audio.volume=Math.max(0,Math.min(1,audio.volume+(target-audio.volume)*0.22));
     },80);
-    update();document.addEventListener('visibilitychange',update);document.addEventListener('pointerdown',update);
-    return()=>{clearInterval(tick);document.removeEventListener('visibilitychange',update);document.removeEventListener('pointerdown',update);audio.pause();};
+    const events=['pointerdown','pointerup','click','touchend','keydown'];
+    update();document.addEventListener('visibilitychange',update);
+    events.forEach(event=>document.addEventListener(event,update,true));
+    window.addEventListener('focus',update);
+    return()=>{clearInterval(tick);document.removeEventListener('visibilitychange',update);events.forEach(event=>document.removeEventListener(event,update,true));window.removeEventListener('focus',update);};
   },[intro,musicOn,page,parentMilestone,dailyBlocked]);
+  useEffect(()=>()=>{musicRef.current?.pause();},[]);
   useEffect(()=>{if(!stars)return;const t=setTimeout(()=>setStars(0),3000);return()=>clearTimeout(t);},[stars]);
   useEffect(()=>{setStars(0);},[page,step,activeChildId]);
   const approvedMedia=cloudMedia.filter(m=>m.is_published && approvedCounts?.[m.id]>0);
