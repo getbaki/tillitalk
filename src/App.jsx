@@ -946,16 +946,11 @@ return <div className="app">
       </section>}
 {page==='edit'&&draft&&<section className="parent editor"><div className="heading-row"><h1>{editing?'Edit media':'Add picture or video'}</h1><button onClick={()=>setPage('admin')}>← Back</button></div><label>Title<input value={draft.title} placeholder="e.g. Brown dog running" onChange={e=>setDraft(d=>({...d,title:e.target.value}))}/></label><label>{editing?'Replace picture/video (optional)':'Picture or video'}<input type="file" accept="image/*,video/mp4,video/webm,video/quicktime" onChange={e=>{const f=e.target.files?.[0];setFile(f||null);setError('');}}/></label>{file&&<p className="muted">Selected: {file.name} ({(file.size/1024/1024).toFixed(1)} MB). Large videos may exceed browser storage limits.</p>}<div className="heading-row"><h2>Questions and answers</h2><button onClick={()=>setDraft(d=>({...d,questions:[...d.questions,newQuestion()]}))}>+ Add question</button></div>{draft.questions.map((q,i)=><div className="question-editor" key={q.id}><div className="heading-row"><h3>Question {i+1}</h3><button className="danger" onClick={()=>setDraft(d=>({...d,questions:d.questions.filter(x=>x.id!==q.id)}))}>Remove</button></div><label>Question<input value={q.question} placeholder="Who is running?" onChange={e=>updateQuestion(q.id,'question',e.target.value)}/></label><label>Correct answer<input value={q.answer} placeholder="The dog" onChange={e=>updateQuestion(q.id,'answer',e.target.value)}/></label><label>Extra wrong words (separate with commas)<input value={q.distractors} placeholder="cat, man, sleeping" onChange={e=>updateQuestion(q.id,'distractors',e.target.value)}/></label></div>)}{error&&<p className="error" role="alert">{error}</p>}<div className="actions"><button onClick={()=>setPage('admin')}>Cancel</button><button className="primary" onClick={save}>Save to library</button></div></section>}
    </main>
-<footer>
-  <p>Made with care for little learners 💛</p>
-
-  <p>
-    <a href="/privacy.html">Privacy Policy</a>
-    {' · '}
-    <a href="/contact.html">Contact</a>
-  </p>
-
-  <p>© 2026 Tales by Moonlight. All rights reserved.</p>
-</footer>
+{page==='home'&&<footer style={{padding:'8px 12px',margin:0,fontSize:12,lineHeight:1.4,textAlign:'center'}}>
+  <a href="/privacy.html" style={{fontSize:12}}>Privacy Policy</a>
+  {' · '}
+  <a href="/contact.html" style={{fontSize:12}}>Contact</a>
+  <span style={{display:'block',fontSize:11}}>© 2026 Tales by Moonlight</span>
+</footer>}
   </div>;
 }
