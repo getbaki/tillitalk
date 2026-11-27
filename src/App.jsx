@@ -44,6 +44,15 @@ async function writeOfflinePack(language,lessons){
 }
 
 
+async function fetchAll(query){
+  const rows=[];
+  for(let offset=0;;offset+=500){
+    const {data,error}=await query().range(offset,offset+499).abortSignal(AbortSignal.timeout(20000));
+    if(error)throw error;
+    rows.push(...(data||[]));
+    if(!data || data.length<500)return rows;
+  }
+}
 function id(){return crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`;}
 function loadLibrary(){try{const x=JSON.parse(localStorage.getItem(LIBRARY_KEY));return Array.isArray(x)?x:[];}catch{return [];}}
 function openDb(){return new Promise((resolve,reject)=>{const req=indexedDB.open(DB_NAME,1);req.onupgradeneeded=()=>req.result.createObjectStore(STORE);req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);});}
@@ -121,7 +130,7 @@ const tryAgainMessages = [
 
 function newQuestion(){return {id:id(),question:'',answer:'',distractors:''};}
 function makePlan(items){const queues=shuffle(items.filter(x=>x.questions?.some(q=>q.question.trim()&&q.answer.trim()))).map(item=>({item,questions:shuffle(item.questions.filter(q=>q.question.trim()&&q.answer.trim()))}));const plan=[];while(queues.some(x=>x.questions.length)){for(const q of queues){const count=Math.min(q.questions.length,Math.random()<.5?1:2);for(let i=0;i<count;i++)plan.push({mediaId:q.item.id,question:q.questions.shift()});}}return plan;}
-// Temporary daily timer test. Restore 60 and 5 after testing.
+// Production daily learning allowance.
 const DAILY_MINUTES = 60;
 const WARNING_MINUTES = 5;
 const DAILY_KEY = 'tillitalk-daily-learning-v1';
@@ -170,6 +179,7 @@ export default function App(){
   const [adminMessage,setAdminMessage]=useState('');
   const [cloudMedia,setCloudMedia]=useState([]);
   const [cloudCounts,setCloudCounts]=useState({});
+  const [approvedCounts,setApprovedCounts]=useState(null);
   const [cloudPreviews,setCloudPreviews]=useState({});
   const [selectedForDelete,setSelectedForDelete]=useState([]);
   const [librarySearch,setLibrarySearch]=useState('');
@@ -205,6 +215,7 @@ export default function App(){
   const [lessonMessage,setLessonMessage]=useState('');
   const [publishedLessons,setPublishedLessons]=useState([]);
   const offlineObjectUrls=useRef([]);
+  const syncJobs=useRef(new Map());
   const [publicLoading,setPublicLoading]=useState(false);
   const [publicError,setPublicError]=useState('');
   
@@ -330,16 +341,22 @@ useEffect(() => {
     return()=>{cancelled=true;};
   },[adminAllowed]);
   useEffect(()=>{
-    if(!adminAllowed || !cloudMedia.length){setCloudCounts({});setCloudPreviews({});return;}
+    if(!adminAllowed || !cloudMedia.length){setCloudCounts({});setCloudPreviews({});setApprovedCounts(adminAllowed?{}:null);return;}
     let cancelled=false;
     (async()=>{
       const ids=cloudMedia.map(m=>m.id);
-      // Query only media_id; no sensitive question content is needed for counts.
-      const {data,error}=await supabase.from('questions').select('media_id').in('media_id',ids);
-      if(!cancelled && !error){
-        const counts={}; for(const q of data||[])counts[q.media_id]=(counts[q.media_id]||0)+1;
-        setCloudCounts(counts);
-      }
+      setApprovedCounts(null);
+      try {
+        const rows=await fetchAll(()=>supabase.from('questions').select('id,media_id,is_published,language,question_text,correct_answer').order('id'));
+        if(!cancelled){
+          const counts={}, approved={};
+          for(const q of rows){
+            counts[q.media_id]=(counts[q.media_id]||0)+1;
+            if(q.is_published && q.language==='en' && q.question_text?.trim() && q.correct_answer?.trim()) approved[q.media_id]=(approved[q.media_id]||0)+1;
+          }
+          setCloudCounts(counts);setApprovedCounts(approved);
+        }
+      }catch(e){if(!cancelled)setAdminMessage('Could not load question counts: '+e.message);}
       // Signed thumbnails are private and expire after one hour.
       const previews={};
       for(let i=0;i<cloudMedia.length;i+=15){
@@ -353,7 +370,7 @@ useEffect(() => {
       }
     })();
     return()=>{cancelled=true;};
-  },[adminAllowed,cloudMedia]);
+  },[adminAllowed,cloudMedia,page]);
 
   async function deleteSelectedCloudMedia(){
     if(lessonBusy||uploading||!selectedForDelete.length)return;
@@ -510,81 +527,68 @@ useEffect(() => {
     }));
     return downloaded;
   }
+  async function syncPublishedLessons(language, base){
+    if(!navigator.onLine)return base;
+    if(syncJobs.current.has(language))return syncJobs.current.get(language);
+    const job=(async()=>{
+      const media=await fetchAll(()=>supabase.from('media').select('id,title,media_type,storage_path').eq('is_published',true).order('id'));
+      const questions=await fetchAll(()=>supabase.from('questions').select('id,media_id,question_text,correct_answer,distractors,language').eq('is_published',true).eq('language',language).order('id'));
+      const usable=media.map(m=>({...m,questions:questions.filter(q=>q.media_id===m.id && q.question_text?.trim() && q.correct_answer?.trim()).map(q=>({id:q.id,question:q.question_text,answer:q.correct_answer,distractors:Array.isArray(q.distractors)?q.distractors.join(', '):String(q.distractors||'')}))})).filter(m=>m.questions.length);
+      // Retain the installed pack if the server unexpectedly returns no content.
+      if(!usable.length && base.length)throw new Error('No published lessons returned');
+      const old=new Map(base.map(m=>[m.id,m]));
+      const downloaded=[];
+      for(let i=0;i<usable.length;i+=6){
+        const batch=await Promise.all(usable.slice(i,i+6).map(async m=>{
+          let blob=old.get(m.id)?.blob;
+          if(!blob?.size){
+            const response=await fetch(import.meta.env.VITE_SUPABASE_URL+'/functions/v1/smart-worker',{method:'POST',headers:{'Content-Type':'application/json',apikey:import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY},body:JSON.stringify({media_id:m.id}),signal:AbortSignal.timeout(20000)});
+            if(!response.ok)throw new Error('A published picture could not be accessed');
+            const payload=await response.json();
+            if(!payload?.url)throw new Error('Missing published picture link');
+            const file=await fetch(payload.url,{signal:AbortSignal.timeout(30000)});
+            if(!file.ok)throw new Error('A published picture could not be downloaded');
+            blob=await file.blob();if(!blob.size)throw new Error('Empty media file');
+          }
+          return {id:m.id,title:m.title,type:m.media_type,questions:m.questions,blob};
+        }));
+        downloaded.push(...batch);
+      }
+      await writeOfflinePack(language,downloaded);
+      return downloaded;
+    })();
+    syncJobs.current.set(language,job);
+    try{return await job;}finally{syncJobs.current.delete(language);}
+  }
+  async function localLessons(language){
+    try{const saved=await readOfflinePack(language);if(saved?.lessons?.length)return saved.lessons;}catch{}
+    try{return await loadBundledLessons(language)||[];}catch{return [];}
+  }
   async function loadPublishedLessons(){
-    setPublicLoading(true);
-    setPublicError('');
+    setPublicLoading(true);setPublicError('');
     try{
-      // Prefer files already inside the app, including on first launch offline.
-      // When bundled lessons exist, they are the Level 1 base; network sync is
-      // a separate future step and must not remove these installed lessons.
-      const bundled=await loadBundledLessons(learnerLanguage);
-      if(bundled!==null){
-        if(!bundled.length)setPublicError('No approved bundled questions for this language yet.');
-        return showDownloadedLessons(bundled);
-      }
-      // Each language has its own complete, downloadable lesson pack.
       const language=learnerLanguage;
-      if(!navigator.onLine)throw new Error('Offline');
-      const {data:media,error:mediaError}=await supabase.from('media')
-        .select('id,title,media_type,storage_path').eq('is_published',true);
-      if(mediaError)throw mediaError;
-      const {data:questions,error:questionError}=await supabase.from('questions')
-        .select('id,media_id,question_text,correct_answer,distractors,language')
-        .eq('is_published',true).eq('language',language);
-      if(questionError)throw questionError;
-
-      const usable=(media||[]).map(m=>({
-        ...m,
-        questions:(questions||[]).filter(q=>q.media_id===m.id).map(q=>({
-          id:q.id,question:q.question_text,answer:q.correct_answer,
-          distractors:(q.distractors||[]).join(', ')
-        }))
-      })).filter(m=>m.questions.some(q=>q.question?.trim()&&q.answer?.trim()));
-
-      // Do not replace a previously saved pack with a partially downloaded pack.
-      const downloaded=await Promise.all(usable.map(async m=>{
-        const response=await fetch(import.meta.env.VITE_SUPABASE_URL+'/functions/v1/smart-worker',{
-          method:'POST',
-          headers:{'Content-Type':'application/json',apikey:import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY},
-          body:JSON.stringify({media_id:m.id})
-        });
-        if(!response.ok)throw new Error('A published picture could not be accessed');
-        const payload=await response.json();
-        if(!payload?.url)throw new Error('Missing published picture link');
-        const mediaResponse=await fetch(payload.url);
-        if(!mediaResponse.ok)throw new Error('A published picture could not be downloaded');
-        const blob=await mediaResponse.blob();
-        return {id:m.id,title:m.title,type:m.media_type,questions:m.questions,blob};
-      }));
-
-      // Keep the new lessons playable even if the device has insufficient storage.
-      try{
-        await writeOfflinePack(language,downloaded);
-      }catch(saveError){
-        setPublicError('Lessons loaded, but the device could not save them for offline use. Free up storage and try again.');
+      let lessons=await localLessons(language);
+      if(lessons.length){
+        // Start immediately with local content; the next round uses the refreshed pack.
+        syncPublishedLessons(language,lessons).catch(e=>console.warn('Lesson sync deferred',e));
+      }else if(navigator.onLine){
+        try{lessons=await syncPublishedLessons(language,lessons);}catch(e){console.warn('Lesson sync failed',e);}
       }
-      return showDownloadedLessons(downloaded);
-    }catch(error){
-      try{
-        const saved=await readOfflinePack(learnerLanguage);
-        if(saved?.lessons?.length){
-          setPublicError('Using downloaded lessons. Connect to Wi-Fi to check for new lessons.');
-          return showDownloadedLessons(saved.lessons);
-        }
-        setPublishedLessons([]);
-        setPublicError('No downloaded lessons are available yet. Connect to Wi-Fi and start learning once to download them.');
-        return [];
-      }catch{
-        setPublishedLessons([]);
-        setPublicError('Could not open downloaded lessons. Connect to Wi-Fi and try again.');
-        return [];
-      }
-    }finally{
-      setPublicLoading(false);
-    }
+      if(!lessons.length)setPublicError('No lessons available yet. Connect to Wi-Fi and try again.');
+      return showDownloadedLessons(lessons);
+    }finally{setPublicLoading(false);}
   }
   useEffect(()=>{
-    if(page==='library')loadPublishedLessons();
+    // Background refresh never replaces the active round.
+    let cancelled=false;
+    async function refresh(){
+      if(!navigator.onLine)return;
+      const base=await localLessons(learnerLanguage);
+      if(!cancelled)syncPublishedLessons(learnerLanguage,base).catch(e=>console.warn('Lesson sync deferred',e));
+    }
+    refresh();window.addEventListener('online',refresh);window.addEventListener('focus',refresh);
+    return()=>{cancelled=true;window.removeEventListener('online',refresh);window.removeEventListener('focus',refresh);};
   },[page,learnerLanguage]);
   async function signIn(e){
     e.preventDefault();setAdminMessage('Signing in…');
@@ -680,7 +684,7 @@ useEffect(() => {
     const timer = setTimeout(() => setHintVisible(false), 5000);
     return () => clearTimeout(timer);
   }, [hintVisible, step, plan]);
-  async function start(){if(!activeChildId){setPage('profiles');return;}if(remainingDaily(dailyRecord(activeChildId))===0){setPage('break');return;}const lessons=await loadPublishedLessons()||[];const p=makePlan([...sample,...library,...lessons]);setPlan(p);setStep(0);setPicked([]);setChecked(false);resetQuestionState();setWordOrder([]);setPage('play');}
+  async function start(){if(!activeChildId){setPage('profiles');return;}if(remainingDaily(dailyRecord(activeChildId))===0){setPage('break');return;}const lessons=await loadPublishedLessons()||[];const p=makePlan([...sample,...library,...lessons]);if(!p.length)return;setPlan(p);setStep(0);setPicked([]);setChecked(false);resetQuestionState();setWordOrder([]);setPage('play');}
   useEffect(()=>{if(!current)return;const words=current.question.answer.trim().split(/\s+/).filter(Boolean).map((word,i)=>({id:`a${i}`,word}));const extra=current.question.distractors.split(',').map(x=>x.trim()).filter(Boolean).map((word,i)=>({id:`e${i}`,word}));setWordOrder(shuffle([...words,...extra]));},[step,plan]);
   
 useEffect(() => {
@@ -700,7 +704,8 @@ useEffect(() => {
   function updateQuestion(qid,field,value){setDraft(d=>({...d,questions:d.questions.map(q=>q.id===qid?{...q,[field]:value}:q)}));}
   async function save(){if(!draft.title.trim()){setError('Please give this picture or video a title.');return;}if(!draft.questions.length||draft.questions.some(q=>!q.question.trim()||!q.answer.trim())){setError('Every question needs both a question and a correct answer.');return;}if(!editing&&!file){setError('Please choose a picture or video.');return;}try{if(file)await dbPut(draft.id,file);const entry={id:draft.id,title:draft.title.trim(),type:file?(file.type.startsWith('video/')?'video':'image'):draft.type,questions:draft.questions,url:undefined};setLibrary(old=>[...old.filter(x=>x.id!==entry.id),entry]);setPage('admin');setError('');}catch(e){setError('Could not save this file. Your browser storage may be full. Try a smaller video.');}}
   async function remove(item){if(!window.confirm(`Delete “${item.title}” and all its questions?`))return;try{await dbDelete(item.id);}catch{}setLibrary(x=>x.filter(y=>y.id!==item.id));}
-  const count=all.reduce((sum,x)=>sum+x.questions.length,0);
+  const approvedMedia=cloudMedia.filter(m=>m.is_published && approvedCounts?.[m.id]>0);
+  const approvedTotal=approvedMedia.reduce((sum,m)=>sum+approvedCounts[m.id],0);
  
 return <div className="app">
   {page === 'play' && celebration === 'streamers-fallback' && (
@@ -717,7 +722,7 @@ return <div className="app">
  
 {page === 'play' && (['band','fox','streamers'].includes(celebration)) && (
   <div role="status" aria-label={celebration === 'fox' ? 'Tilly dances for you!' : celebration === 'band' ? 'Hooray! The animal marching band!' : 'Hooray! You are a star!'} style={{position:'fixed',inset:0,zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',pointerEvents:'auto',background:'transparent'}}>
-    <video key={celebration} src={celebration === 'fox' ? '/TilliTalk-fox-transparent.webm' : celebration === 'band' ? '/TilliTalk-Parade-Transparent.webm' : '/TilliTalk-Streamers-Transparent.webm'} autoPlay muted playsInline onEnded={()=>setCelebration('')} onError={()=>setCelebration('streamers-fallback')} style={{width:celebration === 'fox' ? 'min(65vw, 480px)' : 'min(95vw, 960px)',maxHeight:'80vh',objectFit:'contain',pointerEvents:'none'}} />
+    <video key={celebration} src={celebration === 'fox' ? '/TilliTalk-fox-transparent%20(1).webm' : celebration === 'band' ? '/TilliTalk-Parade-Transparent.webm' : '/TilliTalk-Streamers-Transparent.webm'} autoPlay muted playsInline onEnded={()=>setCelebration('')} onError={()=>setCelebration('streamers-fallback')} style={{width:celebration === 'fox' ? 'min(65vw, 480px)' : 'min(95vw, 960px)',maxHeight:'80vh',objectFit:'contain',pointerEvents:'none'}} />
     <button type="button" onClick={()=>setCelebration('')} style={{position:'absolute',right:16,bottom:16}}>Continue ➜</button>
   </div>
 )}
@@ -754,7 +759,7 @@ return <div className="app">
         <button className="primary" type="button" disabled={!newChildName.trim()} onClick={()=>{addChild();setPage('home');}}>Add child</button>
         <button type="button" onClick={()=>setPage('home')}>Back home</button>
       </section>}
-      {page==='home'&&<section className="hero"><div className="hero-emoji">🐶 💬 🌟</div><h1>Let's talk!</h1><p>Look, listen, and make sentences with words.</p><div className="language-picker"><label>Learning language <select value={learnerLanguage} onChange={e=>setLearnerLanguage(e.target.value)}>{languages.map(([code,name])=><option key={code} value={code}>{name}</option>)}</select></label></div><div style={{margin:'14px 0'}}><button type="button" onClick={()=>setPage('profiles')}>{activeChild?`${activeChild.avatar} ${activeChild.name} · Switch child`:'🐻 Choose or add a child'}</button></div><button className="primary big" disabled={publicLoading} onClick={start}>{publicLoading?'Loading lessons…':'▶ Start learning'}</button><p className="muted">{all.length} pictures & videos · {count} questions</p>{publicError&&<p className="hint" role="status">{publicError}</p>}<div className="hint">Questions switch pictures after 1–2 turns, then revisit earlier pictures.</div></section>}
+      {page==='home'&&<section className="hero"><div className="hero-emoji">🐶 💬 🌟</div><h1>Let's talk!</h1><p>Look, listen, and make sentences with words.</p><div className="language-picker"><label>Learning language <select value={learnerLanguage} onChange={e=>setLearnerLanguage(e.target.value)}>{languages.map(([code,name])=><option key={code} value={code}>{name}</option>)}</select></label></div><div style={{margin:'14px 0'}}><button type="button" onClick={()=>setPage('profiles')}>{activeChild?`${activeChild.avatar} ${activeChild.name} · Switch child`:'🐻 Choose or add a child'}</button></div><button className="primary big" disabled={publicLoading} onClick={start}>{publicLoading?'Loading lessons…':'▶ Start learning'}</button>{publicError&&<p className="hint" role="status">{publicError}</p>}<div className="hint">Questions switch pictures after 1–2 turns, then revisit earlier pictures.</div></section>}
       {page==='break'&&<section className="hero" style={{maxWidth:580,margin:'auto'}}>
         <div className="hero-emoji">🦊 🌙 ⭐</div><h1>Time for a little break!</h1>
         <p>Wonderful learning today! Rest your eyes and stretch your legs.</p><p>⭐ Your learning progress is saved.</p>
@@ -887,6 +892,8 @@ return <div className="app">
            </div><p>{uploadFiles.length} files selected {uploadFiles.length>0&&<button type="button" disabled={uploading} onClick={()=>{setUploadFiles([]);setUploadStatus([]);}}>Clear selection</button>}</p><button className="primary" disabled={!uploadFiles.length||uploading} onClick={uploadAll}>{uploading?'Uploading…':`Upload ${uploadFiles.length} files`}</button><p className="muted">Upload files up to 50 MB each. Your Supabase project may have a lower storage upload limit. Keep this tab open until uploads finish.</p></div>
            {!!uploadStatus.length&&<div className="admin-panel"><h2>Upload results</h2><ul className="upload-results">{uploadStatus.map((x,i)=><li key={i}><span>{x.name}</span><span>{x.status}</span></li>)}</ul></div>}
            <div className="admin-panel">
+             <h2>Level 1 — English content target</h2>
+             {approvedCounts===null?<p>Loading approved counts…</p>:<><p><strong>{approvedTotal} / 500 approved questions</strong> · {approvedMedia.length} published pictures &amp; videos</p><progress value={Math.min(500,approvedTotal)} max={500} style={{width:'100%'}}/><p>{Math.max(0,500-approvedTotal)} questions remaining</p></>}
              <div className="heading-row"><div><h2>🖼️ Your picture library — {cloudMedia.length} items</h2><p className="muted">See each picture, edit its questions, or select several to delete. Drafts stay private until published.</p></div></div>
              <div className="manage-toolbar">
                <input aria-label="Search pictures" placeholder="🔎 Search pictures by title…" value={librarySearch} onChange={e=>setLibrarySearch(e.target.value)}/>
