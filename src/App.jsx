@@ -122,9 +122,9 @@ const tryAgainMessages = [
 function newQuestion(){return {id:id(),question:'',answer:'',distractors:''};}
 function makePlan(items){const queues=shuffle(items.filter(x=>x.questions?.some(q=>q.question.trim()&&q.answer.trim()))).map(item=>({item,questions:shuffle(item.questions.filter(q=>q.question.trim()&&q.answer.trim()))}));const plan=[];while(queues.some(x=>x.questions.length)){for(const q of queues){const count=Math.min(q.questions.length,Math.random()<.5?1:2);for(let i=0;i<count;i++)plan.push({mediaId:q.item.id,question:q.questions.shift()});}}return plan;}
 // Temporary daily timer test. Restore 60 and 5 after testing.
-const DAILY_MINUTES = 2;
-const WARNING_MINUTES = 0.5;
-const DAILY_KEY = 'tillitalk-daily-learning-test-v1';
+const DAILY_MINUTES = 60;
+const WARNING_MINUTES = 5;
+const DAILY_KEY = 'tillitalk-daily-learning-v1';
 function localDay(){const d=new Date();return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;}
 function dailyRecord(child){const r=readSaved(DAILY_KEY,{})[child];return r?.day===localDay()?r:{day:localDay(),used:0,extra:0};}
 function saveDaily(child,r){const all=readSaved(DAILY_KEY,{});all[child]=r;localStorage.setItem(DAILY_KEY,JSON.stringify(all));}
