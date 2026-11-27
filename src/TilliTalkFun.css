@@ -149,3 +149,29 @@ body { margin:0; color:var(--tt-ink); background:linear-gradient(155deg,#e7f9ff 
 .app .tt-intro video {display:block;width: min(86vw, 900px);height:70vh;height:70dvh;max-width:86vw;max-height:70vh;max-height:70dvh;min-width:0;min-height:0;object-fit:contain;flex:none;}
 .tt-star-sprinkles {position:fixed;top:24%;left:50%;transform:translateX(-50%);width:min(55vw,480px);max-height:28vh;object-fit:contain;z-index:9998;pointer-events:none;}
 @media(prefers-reduced-motion:reduce){.tt-star-sprinkles{display:none;}}
+
+/* Glossy storybook frame, matching the approved purple/gold concept. */
+.app .play-card {
+ border:clamp(10px,1.5vw,19px) solid transparent;
+ border-radius:36px;
+ background:radial-gradient(ellipse at 50% 50%,#faf8ff 20%,#eee5ff 65%,#c38afa 100%) padding-box,linear-gradient(170deg,#e9b5ff 0%,#a52aff 9%,#650bd0 25%,#8d24ee 65%,#c77aff 87%,#5205ad 100%) border-box;
+ box-shadow:inset 0 0 0 2px #e9c9ff,inset 0 0 20px #9e4af866,0 5px 0 #5108a9,0 12px 28px #7020b855;
+ padding:clamp(12px,1.5vw,24px);
+}
+.app .play-card::before,.app .play-card::after {content:'';position:absolute;left:0;right:0;height:35px;background:url('/tillitalk-frame-stars.svg') center/100% 100% no-repeat;pointer-events:none;z-index:3;}
+.app .play-card::before {top:0;}
+.app .play-card::after {bottom:0;transform:scaleX(-1);}
+.app .play-card {padding-bottom:38px;}
+.app .play-card .lesson-media {background:radial-gradient(ellipse,#f4efff,#ddd3fa);border:6px solid #ffc21a;border-radius:28px;box-shadow:0 0 0 2px #fff3a0,inset 0 0 0 2px #fff6bb,0 0 14px #ffbf4799,0 5px 0 #d99513;}
+.app .play-card .question-line h2 {color:#4b128e;text-shadow:0 2px 0 #fff,0 0 7px #fff;}
+.app .play-card .question-line .sound {background:linear-gradient(#fff,#e2caff);border:2px solid #9a55ed;box-shadow:0 4px 0 #b18af0;}
+.app .play-card .answer-zone {background:#f1f7ff;border:3px dashed #35a9ef;box-shadow:inset 0 0 0 2px #fff;}
+.app .play-card .word-bank .word {background:linear-gradient(#fff4a8,#ffce38);border-color:#f6b51c;box-shadow:inset 0 2px 0 #fff9,0 5px 0 #d68d13; color:#42116f;}
+.app .play-card .word-bank .word:nth-child(4n + 2){background:linear-gradient(#e0faff,#78d9ff);border-color:#32b9ee;box-shadow:inset 0 2px 0 #fff9,0 5px 0 #1999ce;}
+.app .play-card .word-bank .word:nth-child(4n + 3){background:linear-gradient(#ffe5f7,#ffa3dc);border-color:#ef75c3;box-shadow:inset 0 2px 0 #fff9,0 5px 0 #cf4c9f;}
+.app .play-card .word-bank .word:nth-child(4n + 4){background:linear-gradient(#e5ffdb,#9ae89c);border-color:#61d47c;box-shadow:inset 0 2px 0 #fff9,0 5px 0 #35a957;}
+.app .play-card .actions button:not(.primary){background:linear-gradient(#fff,#e9d8ff);border:2px solid #c299f7;box-shadow:0 3px 0 #b88be9;color:#4b128e;font-weight:800;}
+.app .play-card .actions .primary {background:linear-gradient(#c56bff,#7909d5 45%,#a91de2);border:3px solid #ffd34d;box-shadow:inset 0 2px 0 #f1b8ff,0 4px 0 #d69a16,0 0 12px #c46aff88;}
+/* Feather the video perimeter into its surrounding cream background. */
+.app .tt-intro {background:#fbf6ed;}
+.app .tt-intro video {-webkit-mask-image:linear-gradient(to right,transparent,#000 5%,#000 95%,transparent),linear-gradient(to bottom,transparent,#000 5%,#000 95%,transparent);-webkit-mask-composite:source-in;mask-image:linear-gradient(to right,transparent,#000 5%,#000 95%,transparent),linear-gradient(to bottom,transparent,#000 5%,#000 95%,transparent);mask-composite:intersect;}
