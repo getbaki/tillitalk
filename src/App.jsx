@@ -305,7 +305,7 @@ useEffect(() => {
 
   const timer = setTimeout(() => {
     setCelebration('');
-  }, celebration === 'fox' ? 32000 : celebration === 'band' ? 17000 : celebration === 'streamers' ? 8000 : 5000);
+  }, celebration === 'fox' ? 5000 : celebration === 'band' ? 17000 : celebration === 'streamers' ? 8000 : 5000);
 
   return () => clearTimeout(timer);
 }, [celebration]);
@@ -721,6 +721,7 @@ useEffect(() => {
       video.muted=false;
       video.play().catch(()=>{if(active){video.muted=true;video.play().catch(()=>{});}});
     };
+    document.addEventListener('pointerup',unlockIntro,true);
     document.addEventListener('click',unlockIntro,true);
     document.addEventListener('keydown',unlockIntro,true);
     if(video){
@@ -731,13 +732,13 @@ useEffect(() => {
         video.play().catch(()=>{if(active)setIntro(false);});
       });
     }
-    return()=>{active=false;clearTimeout(t);document.removeEventListener('click',unlockIntro,true);document.removeEventListener('keydown',unlockIntro,true);document.body.style.overflow=previousOverflow;};
+    return()=>{active=false;clearTimeout(t);document.removeEventListener('pointerup',unlockIntro,true);document.removeEventListener('click',unlockIntro,true);document.removeEventListener('keydown',unlockIntro,true);document.body.style.overflow=previousOverflow;};
   },[intro]);
   useEffect(()=>{localStorage.setItem('tillitalk-music',musicOn?'on':'off');},[musicOn]);
   useEffect(()=>{
     const audio=musicRef.current;
     if(!audio)return;
-    const allowed=()=>musicOn&&!intro&&!document.hidden&&['home','profiles','play'].includes(page)&&!parentMilestone&&!dailyBlocked;
+    const allowed=()=>musicOn&&!intro&&!document.hidden&&['home','profiles','play'].includes(page)&&!parentMilestone&&(page!=='play'||!dailyBlocked);
     const targetVolume=()=>page==='play'?((window.speechSynthesis?.speaking||window.speechSynthesis?.pending)?0.025:0.09):0.20;
     if(audio.paused)audio.volume=targetVolume();
     const update=()=>{if(!allowed()){audio.pause();return;}if(audio.paused)audio.play().catch(()=>{});};
@@ -752,7 +753,7 @@ useEffect(() => {
     return()=>{clearInterval(tick);document.removeEventListener('visibilitychange',update);events.forEach(event=>document.removeEventListener(event,update,true));window.removeEventListener('focus',update);};
   },[intro,musicOn,page,parentMilestone,dailyBlocked]);
   useEffect(()=>()=>{musicRef.current?.pause();},[]);
-  useEffect(()=>{if(!stars)return;const t=setTimeout(()=>setStars(0),3000);return()=>clearTimeout(t);},[stars]);
+  useEffect(()=>{if(!stars)return;const t=setTimeout(()=>setStars(0),2900);return()=>clearTimeout(t);},[stars]);
   useEffect(()=>{setStars(0);},[page,step,activeChildId]);
   const approvedMedia=cloudMedia.filter(m=>m.is_published && approvedCounts?.[m.id]>0);
   const approvedTotal=approvedMedia.reduce((sum,m)=>sum+approvedCounts[m.id],0);
@@ -762,7 +763,7 @@ return <div className="app">
   {intro&&<div className="tt-intro" role="dialog" aria-label="Welcome to TilliTalk">
     <video ref={introRef} src="/TilliTalk-Golden-Intro.mp4" autoPlay playsInline onEnded={()=>setIntro(false)} onError={()=>setIntro(false)} />
   </div>}
-  {page==='play'&&stars>0&&!parentMilestone&&<video key={stars} className="tt-star-sprinkles" src="/TilliTalk-Star-Sprinkles.webm" autoPlay muted playsInline aria-hidden="true" onEnded={()=>setStars(0)} onError={()=>setStars(0)} />}
+  {page==='play'&&stars>0&&!parentMilestone&&<video key={stars} className="tt-star-sprinkles" src="/TilliTalk-Star-Sprinkles-v2.webm" style={{width:'min(82vw, 1000px)',maxHeight:'58vh',top:'15%'}} autoPlay muted playsInline aria-hidden="true" onEnded={()=>setStars(0)} onError={()=>setStars(0)} />}
 
   {page === 'play' && celebration === 'streamers-fallback' && (
     <div className="streamer-celebration" aria-label="Celebration!" role="status">
