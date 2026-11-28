@@ -1,0 +1,14 @@
+(()=>{
+const music=new Audio('TilliTalk-Woodland-Loop.ogg'); music.loop=true; music.volume=.2;
+let enabled=true; try{enabled=localStorage.getItem('tillitalk-demo-music')!=='off'}catch{}
+let intro=true; const cover=document.createElement('div'); cover.style.cssText='position:fixed;inset:0;z-index:20000;background:radial-gradient(ellipse at 50% 48%,#fffef1 0%,#fff1b6 28%,#f8ce72 65%,#f4b65b 100%);display:grid;place-items:center;overflow:hidden';
+const v=document.createElement('video'); v.src='TilliTalk-Transparent-Intro.webm';v.playsInline=true;v.style.cssText='position:relative;width:min(88vw,76vh);height:76vh;object-fit:contain;z-index:1;transform:translateY(-5vh)';const rays=document.createElement('div');rays.style.cssText='position:absolute;inset:-80%;background:repeating-conic-gradient(from 8deg at 50% 50%,transparent 0deg 12deg,rgba(255,255,225,.35) 18deg,transparent 28deg);mask-image:radial-gradient(circle,transparent 5%,black 32%,black 100%);pointer-events:none';cover.append(rays,v);const title=document.createElement('div');title.textContent='TilliTalk';title.style.cssText='position:absolute;bottom:5%;left:0;right:0;text-align:center;font:900 clamp(42px,9vw,100px) system-ui,sans-serif;color:#7540bb;text-shadow:0 2px 0 #fff,0 4px 12px #fff3b5;z-index:2;opacity:0';cover.append(title);v.addEventListener('timeupdate',()=>{title.style.opacity=String(Math.min(1,Math.max(0,(v.currentTime-3.5)/.7)))});document.body.append(cover);
+const b=document.createElement('button');document.querySelector('nav').prepend(b);function label(){b.textContent=enabled?'🎵 Music on':'🎵 Music off';b.setAttribute('aria-pressed',String(enabled))}label();
+function play(){if(enabled&&!intro&&!document.hidden)music.play().catch(()=>{});else music.pause()}
+function finish(){if(!intro)return;intro=false;v.pause();cover.remove();play()}
+v.onended=finish;v.onerror=finish;setTimeout(finish,20000);v.muted=!enabled;v.play().catch(()=>{if(intro){v.muted=true;v.play().catch(finish)}});
+function unlock(){if(intro&&enabled){v.muted=false;v.play().catch(()=>{})}else play()}
+document.addEventListener('pointerdown',unlock);document.addEventListener('keydown',unlock);document.addEventListener('visibilitychange',play);
+b.onclick=()=>{enabled=!enabled;try{localStorage.setItem('tillitalk-demo-music',enabled?'on':'off')}catch{}label();play()};
+let speech=false;const original=window.say;if(typeof original==='function'){window.say=function(t){original(t);speech=true;}}let volume=.2;setInterval(()=>{speech=!!window.speechSynthesis?.speaking;const target=document.getElementById('picture')?(speech ? .10 : .20):.30;volume+=(target-volume)*.2;music.volume=volume;},100);
+})();
