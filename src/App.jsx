@@ -761,7 +761,8 @@ useEffect(() => {
 return <div className="app">
   <audio ref={musicRef} src="/TilliTalk-Woodland-Loop.ogg" loop preload="auto" />
   {intro&&<div className="tt-intro" role="dialog" aria-label="Welcome to TilliTalk">
-    <video ref={introRef} src="/TilliTalk-Golden-Intro.mp4" autoPlay playsInline onEnded={()=>setIntro(false)} onError={()=>setIntro(false)} />
+    <video ref={introRef} src="/TilliTalk-Transparent-Intro.webm" autoPlay playsInline onTimeUpdate={e=>{const title=e.currentTarget.nextElementSibling;if(title)title.style.opacity=String(Math.min(1,Math.max(0,(e.currentTarget.currentTime-3.5)/0.7)));}} onEnded={()=>setIntro(false)} onError={()=>setIntro(false)} />
+    <div className="tt-intro-title" aria-hidden="true">TilliTalk</div>
   </div>}
   {page==='play'&&stars>0&&!parentMilestone&&<video key={stars} className="tt-star-sprinkles" src="/TilliTalk-Star-Sprinkles-v2.webm" style={{width:'min(82vw, 1000px)',maxHeight:'58vh',top:'15%'}} autoPlay muted playsInline aria-hidden="true" onEnded={()=>setStars(0)} onError={()=>setStars(0)} />}
 

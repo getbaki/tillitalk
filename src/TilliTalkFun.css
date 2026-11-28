@@ -175,3 +175,9 @@ body { margin:0; color:var(--tt-ink); background:linear-gradient(155deg,#e7f9ff 
 /* Feather the video perimeter into its surrounding cream background. */
 .app .tt-intro {background:#fbf6ed;}
 .app .tt-intro video {-webkit-mask-image:linear-gradient(to right,transparent,#000 5%,#000 95%,transparent),linear-gradient(to bottom,transparent,#000 5%,#000 95%,transparent);-webkit-mask-composite:source-in;mask-image:linear-gradient(to right,transparent,#000 5%,#000 95%,transparent),linear-gradient(to bottom,transparent,#000 5%,#000 95%,transparent);mask-composite:intersect;}
+
+/* Full-screen golden introduction, matching the approved demo. */
+.app .tt-intro {background:radial-gradient(ellipse at 50% 48%,#fffef1 0%,#fff1b6 28%,#f8ce72 65%,#f4b65b 100%);}
+.app .tt-intro::before {content:"";position:absolute;inset:-80%;background:repeating-conic-gradient(from 8deg at 50% 50%,transparent 0deg 12deg,rgba(255,255,225,.35) 18deg,transparent 28deg);mask-image:radial-gradient(circle,transparent 5%,black 32%,black 100%);pointer-events:none;}
+.app .tt-intro video {position:relative;z-index:1;width:min(88vw,76vh);height:76vh;height:76dvh;max-width:88vw;max-height:76dvh;transform:translateY(-5vh);-webkit-mask-image:none;mask-image:none;}
+.app .tt-intro-title {position:absolute;bottom:5%;left:0;right:0;text-align:center;font:900 clamp(42px,9vw,100px) system-ui,sans-serif;color:#7540bb;text-shadow:0 2px 0 #fff,0 4px 12px #fff3b5;z-index:2;opacity:0;pointer-events:none;}
