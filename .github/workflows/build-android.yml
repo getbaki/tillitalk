@@ -97,6 +97,25 @@ jobs:
 
           print("TilliTalk launcher icons generated successfully.")
           PY
+      - name: Enable automatic Android media playback
+        run: |
+          python3 <<'PYCODE'
+          from pathlib import Path
+          files = list(Path('android/app/src/main/java').rglob('MainActivity.java'))
+          assert len(files) == 1, 'Expected one Java MainActivity'
+          p = files[0]
+          s = p.read_text()
+          setting = 'getBridge().getWebView().getSettings().setMediaPlaybackRequiresUserGesture(false);'
+          if setting not in s:
+              import re
+              if re.search(r'super\.onCreate\(\w+\);', s):
+                  s = re.sub(r'(super\.onCreate\(\w+\);)', lambda m: m[0] + '\n        ' + setting, s, count=1)
+              else:
+                  pos = s.rfind('}')
+                  assert pos >= 0
+                  s = s[:pos] + '    @Override\n    public void onCreate(android.os.Bundle savedInstanceState) {\n        super.onCreate(savedInstanceState);\n        ' + setting + '\n    }\n' + s[pos:]
+              p.write_text(s)
+          PYCODE
       - name: Build test APK
         working-directory: android
         run: bash gradlew assembleDebug --no-daemon
